@@ -9,3 +9,5 @@ class COFNIG:
     T: int = 100  # The number of rounds
     creat_new_instance: bool = False # Whether to create a new bandit instance or not
     bandit_instance_path: str = "./data/bandit_data.npz"
+    mode: int = 1 # 1 = all inequalities; 2 = optimal arm only
+    QP: bool = False # False: Use Feasibility Problem; True: Use Quadratic Problem

@@ -2,6 +2,7 @@ from src.config import COFNIG
 from src.logged_data import create_bandit_instance, save_bandit_instance, load_bandit_instance
 from src.ucb import UCBAlgorithm
 from src.adversary import FindPerturbation, find_random_perturbation
+from src.ablations import *
 
 cfg = COFNIG()
 k, d, T = cfg.k, cfg.d, cfg.T
@@ -31,10 +32,12 @@ def run_ucb_with_random_perturbation(k, d, T, mu, logged_data, epsilon_attack):
     print(chosen_arms)
 
 
-
 run_ucb_without_perturbation(k, d, T, mu, logged_data)
 print(60*'=')
 print(60*'=')
 run_ucb_with_random_perturbation(k, d, T, mu, logged_data, epsilon_attack=0.5)
+print(60*'=')
+print(60*'=')
+ablation1(k, d, T, mu, logged_data, epsilon_attack=0.5) # check all inequalities
 print(60*'=')
 print(60*'=')

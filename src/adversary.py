@@ -1,4 +1,8 @@
 import numpy as np
+from tqdm import tqdm
+import math
+import cvxpy as cp
+
 
 def find_random_perturbation(d, epsilon):
     perturbation = np.random.randn(d)
@@ -37,7 +41,7 @@ class FindPerturbation:
         ### untargetted
         else:
           self.turn += 1
-          if self.turn == k:
+          if self.turn == self.k:
             self.turn = 1
           return self.turn
 
@@ -74,7 +78,7 @@ class FindPerturbation:
         constraints = []
         for (d_j, c_j) in self.history:
             constraints.append(x @ d_j >= c_j + 1e-6)
-        if qp:
+        if self.qp:
           if self.infinity_attack:
             objective = cp.Minimize(cp.norm(x, "inf"))
           else:
@@ -101,7 +105,7 @@ class FindPerturbation:
         for t in tqdm(range(T)):
             arm = self.select_arm(t)
 
-            if t >= self.k and ((t-k) % self.M == 0):
+            if t >= self.k and ((t-self.k) % self.M == 0):
               if mode == 1: # check all inequalities
                 perturbation = self.find_perturbation(arm, t)
               elif mode == 2: # check just optimal inequalities
