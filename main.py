@@ -38,6 +38,28 @@ print(60*'=')
 run_ucb_with_random_perturbation(k, d, T, mu, logged_data, epsilon_attack=0.5)
 print(60*'=')
 print(60*'=')
+
+print("ABLATION 1")
 ablation1(k, d, T, mu, logged_data, epsilon_attack=0.5) # check all inequalities
+print(60*'=')
+print(60*'=')
+
+print("ABLATION 2")
+ablation2(k, d, T, mu, logged_data, epsilon_attack=0.5) # check only the optimal arm's inequalities to be satisfied
+print(60*'=')
+print(60*'=')
+
+print("ABLATION 3")
+ablation3(k, d, T, mu, logged_data, epsilon_attack=0.5) # check quadratic problem
+print(60*'=')
+print(60*'=')
+
+print("ABLATION 4")
+ablation4(k, d, T, mu, logged_data, epsilon_attack=0.5, M=10) # M alternatives attack
+print(60*'=')
+print(60*'=')
+
+print("ABLATION 5")
+ablation5(k, d, T, mu, logged_data, epsilon_attack=0.5, targeted=True, target_arm=2) # Target Attack
 print(60*'=')
 print(60*'=')
