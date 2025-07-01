@@ -7,7 +7,7 @@ class COFNIG:
     n_samples: int = 3000  # The number of samples for each arm in the logged data
     sigma: float = 1.0  # The variance of Gaussian distribution of each arm
     T: int = 100  # The number of rounds
+    m: int = 5. # The number of pulling each arm in ETC algorithm
     creat_new_instance: bool = False # Whether to create a new bandit instance or not
     bandit_instance_path: str = "./data/bandit_data.npz"
-    mode: int = 1 # 1 = all inequalities; 2 = optimal arm only
-    QP: bool = False # False: Use Feasibility Problem; True: Use Quadratic Problem
+    attack_algorithm: str = "etc" # ["ucb", "etc", "epsilon_greedy", "thompson sampling"]
