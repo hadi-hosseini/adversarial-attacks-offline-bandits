@@ -63,3 +63,13 @@ print("ABLATION 5")
 ablation5(k, d, T, mu, logged_data, epsilon_attack=0.5, targeted=True, target_arm=2) # Target Attack
 print(60*'=')
 print(60*'=')
+
+print("ABLATION 6")
+ablation6(k, d, T, mu, logged_data, epsilon_attack=1/125, targeted=True, target_arm=2) # Infinity norm attack
+print(60*'=')
+print(60*'=')
+
+print("ABLATION 7")
+ablation7(k, d, T, mu, logged_data, epsilon_attack=0.5) # Restricted Threat Model (Infer Mu)
+print(60*'=')
+print(60*'=')
