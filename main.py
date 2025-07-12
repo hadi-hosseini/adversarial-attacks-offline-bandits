@@ -9,9 +9,11 @@ from src.ablations.etc_ablations import *
 cfg = COFNIG()
 k, d, T, m, attack_algorithm = cfg.k, cfg.d, cfg.T, cfg.m, cfg.attack_algorithm
 
+print(f"Bandit Instance with  T:{T}, K:{k}, D:{d}")
+
 if cfg.creat_new_instance:
     mu, logged_data = create_bandit_instance(k, d, cfg.n_samples, cfg.sigma)
-    save_bandit_instance(mu, logged_data, cfg.bandit_instance_path)
+    save_bandit_instance(mu, k, d, logged_data, cfg.bandit_instance_path)
     print("Save new Bandit Instance")
 else:
     mu, logged_data = load_bandit_instance(cfg.bandit_instance_path)
@@ -82,7 +84,7 @@ if attack_algorithm == "ucb":
     # print(60*'=')
 
     print("HEURISTIC 1")
-    heuristic1_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5, qp=False)
+    heuristic1_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5, qp=False, hijack_traj=True)
     print(60*'=')
     print(60*'=')
 

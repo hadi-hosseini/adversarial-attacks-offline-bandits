@@ -10,13 +10,13 @@ def create_logged_data(k, d, n_samples, sigma, mu):
   return samples
 
 # create orthogonal mus (slow way)
-def create_orthogonal_mu(k, d):
+def slow_create_orthogonal_mu(k, d):
   orthogonal_matrix = ortho_group.rvs(dim=d)
   mu = orthogonal_matrix[:k]
   return mu
 
 # create orthogonal mus (fast way)
-def create_orthogonal_mu(k, d):
+def fast_create_orthogonal_mu(k, d):
     A = np.random.randn(d, k)
     Q, _ = np.linalg.qr(A)  
     return Q.T 
@@ -25,16 +25,26 @@ def create_orthogonal_mu(k, d):
 def verify_mu(k, mu):
   for i in range(k):
       for j in range(i+1, k):
-          print(f"Dot product μ_{i+1}·μ_{j+1}: {np.dot(mu[i], mu[j])}")
+        dot_product = np.dot(mu[i], mu[j])
+        # print(f"Dot product μ_{i+1}·μ_{j+1}: {dot_product}")
+        if abs(dot_product) >= 0.1:
+            return False
+  return True
 
 def create_bandit_instance(k, d, n_samples, sigma):
-  mu = create_orthogonal_mu(k, d)
+  if d > 1000:
+    mu = fast_create_orthogonal_mu(k, d)
+    assert verify_mu(k, mu), "Mu vectors are not sufficiently orthogonal!"
+  else:
+    mu = slow_create_orthogonal_mu(k, d)
+    assert verify_mu(k, mu), "Mu vectors are not sufficiently orthogonal!"
+
   logged_data = create_logged_data(k, d, n_samples, sigma, mu)
   return mu, logged_data
 
 # Function to save mu and logged data to a file
-def save_bandit_instance(mu, logged_data, filename):
-    np.savez(filename, mu=mu, logged_data=logged_data)
+def save_bandit_instance(mu, k, d, logged_data, filename):
+    np.savez(filename, mu=mu, k=k, d=d, logged_data=logged_data)
 
 # Function to load mu and logged data from a file
 def load_bandit_instance(filename):

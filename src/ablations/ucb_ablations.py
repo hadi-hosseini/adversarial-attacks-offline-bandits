@@ -85,8 +85,8 @@ def ablation7_ucb(k, d, T, mu, logged_data, epsilon_attack, targeted, target_arm
     print_norms(perturbation)
     run_ucb_with_created_perturbation(k, d, T, mu, logged_data, perturbation)
 
-def heuristic1_ucb(k, d, T, mu, logged_data, epsilon_attack, qp=False):
-    find_perturbation = AdaptivePerturbationUCB(k, d, T, mu, logged_data, epsilon_attack, qp=qp)
+def heuristic1_ucb(k, d, T, mu, logged_data, epsilon_attack, qp=False, hijack_traj=False):
+    find_perturbation = AdaptivePerturbationUCB(k, d, T, mu, logged_data, epsilon_attack, qp=qp, hijack_traj=hijack_traj)
     chosen_arms, do_attacks, perturbation = find_perturbation.run()
     print("\nNumber of pulls per arm:", find_perturbation.N)
     print(chosen_arms)

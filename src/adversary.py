@@ -128,7 +128,7 @@ class FindPerturbationUCB:
 
 
 class AdaptivePerturbationUCB:
-    def __init__(self, k, d, T, true_means, logged_data, epsilon, qp=False):
+    def __init__(self, k, d, T, true_means, logged_data, epsilon, qp=False, hijack_traj=False):
         self.k = k
         self.d = d
         self.T = T
@@ -136,6 +136,7 @@ class AdaptivePerturbationUCB:
         self.logged_data = logged_data
         self.epsilon = epsilon
         self.qp = qp
+        self.hijack_traj = hijack_traj
 
         self.N = np.zeros(k)
         self.empirical_means = np.zeros((k, d))
@@ -152,33 +153,44 @@ class AdaptivePerturbationUCB:
           return t, False
 
         # target arm selection
+        upper_conf = self.empirical_rewards + np.sqrt(2 * np.log(t) / self.N)
+
+        if self.perturbation is None:
+          best_arm = np.argmax(upper_conf) 
+          if best_arm != 0:
+             return best_arm, False 
+          runner_up = np.argmax(upper_conf[1:]) + 1
+          return runner_up, True
+
         else:
-          # print(f"step {t}: {self.empirical_rewards}")
-          # print(f"step {t}: {self.empirical_rewards + np.sqrt(2 * math.log(t) / self.N)}")
-          if self.perturbation is None:
-            best_arm = max(range(1, self.k), key=lambda i: self.empirical_rewards[i] + math.sqrt(2 * math.log(t) / self.N[i]))
-            return best_arm, True
-          else:
-            for j in range(1, self.k): # check that it needs an attack or not?
-                if self.empirical_rewards[j] + math.sqrt(2 * math.log(t) / self.N[j])> self.empirical_rewards[0] + math.sqrt(2 * math.log(t) / self.N[0]):
-                  best_arm = max(range(1, self.k), key=lambda i: self.empirical_rewards[i] + math.sqrt(2 * math.log(t) / self.N[i]))
+          # Check if any arm beats arm 0
+          for j in range(1, self.k):
+              if upper_conf[j] > upper_conf[0]:
+                  best_arm = np.argmax(upper_conf[1:]) + 1
                   return best_arm, False
-                
-              # check which arm is best to select for attack
-            best_arm = max(range(1, self.k), key=lambda i: self.empirical_rewards[i] + math.sqrt(2 * math.log(t) / self.N[i]))
-            return best_arm, True 
+          best_arm = np.argmax(upper_conf[1:]) + 1
+          return best_arm, True
 
     # do perturbation attack
     def find_perturbation(self, arm, t):
         x = cp.Variable(self.d)
 
-        d_0 = self.empirical_means[arm] - self.empirical_means[0]
-        c_0 = (math.sqrt(2 * math.log(t) / self.N[0]) - math.sqrt(2 * math.log(t) / self.N[arm])) - np.dot(self.true_means[0], d_0)
-        self.all_constraints.append((d_0, c_0))
+        if not self.hijack_traj:
+          d_0 = self.empirical_means[arm] - self.empirical_means[0]
+          c_0 = (math.sqrt(2 * math.log(t) / self.N[0]) - math.sqrt(2 * math.log(t) / self.N[arm])) - np.dot(self.true_means[0], d_0)
+          self.all_constraints.append((d_0, c_0))
+
+        else: 
+          for j in range(self.k):
+              if j != arm:
+                d_j = self.empirical_means[arm] - self.empirical_means[j]
+                c_j = (math.sqrt((2 * math.log(t)) / self.N[j]) - math.sqrt((2 * math.log(t)) / self.N[arm])) - np.dot(self.true_means[0], d_j)
+                self.all_constraints.append((d_j, c_j))
 
         constraints = []
         for (d_0, c_0) in self.all_constraints:
-            constraints.append(x @ d_0 >= c_0 + 1e-9)
+            constraints.append(x @ d_0 >= c_0 + 1e-6)
+
 
         # face as feasbility problem
         if self.qp:
@@ -204,8 +216,11 @@ class AdaptivePerturbationUCB:
 
       # update based on last perturbation
       for j in range(self.k):
-        if self.N[j] > 0:
-          self.empirical_rewards[j] = np.dot(self.true_means[0] + (self.perturbation if self.perturbation is not None else 0.0), self.empirical_means[j])
+        self.empirical_rewards[j] = np.dot(self.true_means[0] + (self.perturbation if self.perturbation is not None else np.zeros(self.d)), self.empirical_means[j])
+
+      # print(f"step {t}: empirical rewards: {self.empirical_rewards}")
+      # print(f"step {t}: empirical ucb: {self.empirical_rewards + np.sqrt(2 * np.log(t) / self.N)}")
+      # print(10*'-')
 
     def run(self):
         for t in tqdm(range(self.T)):
