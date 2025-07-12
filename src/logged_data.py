@@ -9,11 +9,17 @@ def create_logged_data(k, d, n_samples, sigma, mu):
     samples.append(np.random.normal(loc=mu[i], scale=sigma, size=(n_samples, d)))
   return samples
 
-# create orthogonal mus
+# create orthogonal mus (slow way)
 def create_orthogonal_mu(k, d):
   orthogonal_matrix = ortho_group.rvs(dim=d)
   mu = orthogonal_matrix[:k]
   return mu
+
+# create orthogonal mus (fast way)
+def create_orthogonal_mu(k, d):
+    A = np.random.randn(d, k)
+    Q, _ = np.linalg.qr(A)  
+    return Q.T 
 
 # verify orthogonality
 def verify_mu(k, mu):

@@ -124,6 +124,103 @@ class FindPerturbationUCB:
             chosen_arms[t] = arm
 
         return chosen_arms
+    
+
+
+class AdaptivePerturbationUCB:
+    def __init__(self, k, d, T, true_means, logged_data, epsilon, qp=False):
+        self.k = k
+        self.d = d
+        self.T = T
+        self.true_means = true_means
+        self.logged_data = logged_data
+        self.epsilon = epsilon
+        self.qp = qp
+
+        self.N = np.zeros(k)
+        self.empirical_means = np.zeros((k, d))
+        self.empirical_rewards = np.zeros(k)
+        self.perturbation = None
+        self.all_constraints = []
+        self.chosen_arms = np.zeros(self.T, dtype=int)
+        self.do_attacks = np.zeros(self.T, dtype=int)
+
+
+    def select_arm(self, t):
+        # exploration phase
+        if t < self.k:
+          return t, False
+
+        # target arm selection
+        else:
+          # print(f"step {t}: {self.empirical_rewards}")
+          # print(f"step {t}: {self.empirical_rewards + np.sqrt(2 * math.log(t) / self.N)}")
+          if self.perturbation is None:
+            best_arm = max(range(1, self.k), key=lambda i: self.empirical_rewards[i] + math.sqrt(2 * math.log(t) / self.N[i]))
+            return best_arm, True
+          else:
+            for j in range(1, self.k): # check that it needs an attack or not?
+                if self.empirical_rewards[j] + math.sqrt(2 * math.log(t) / self.N[j])> self.empirical_rewards[0] + math.sqrt(2 * math.log(t) / self.N[0]):
+                  best_arm = max(range(1, self.k), key=lambda i: self.empirical_rewards[i] + math.sqrt(2 * math.log(t) / self.N[i]))
+                  return best_arm, False
+                
+              # check which arm is best to select for attack
+            best_arm = max(range(1, self.k), key=lambda i: self.empirical_rewards[i] + math.sqrt(2 * math.log(t) / self.N[i]))
+            return best_arm, True 
+
+    # do perturbation attack
+    def find_perturbation(self, arm, t):
+        x = cp.Variable(self.d)
+
+        d_0 = self.empirical_means[arm] - self.empirical_means[0]
+        c_0 = (math.sqrt(2 * math.log(t) / self.N[0]) - math.sqrt(2 * math.log(t) / self.N[arm])) - np.dot(self.true_means[0], d_0)
+        self.all_constraints.append((d_0, c_0))
+
+        constraints = []
+        for (d_0, c_0) in self.all_constraints:
+            constraints.append(x @ d_0 >= c_0 + 1e-9)
+
+        # face as feasbility problem
+        if self.qp:
+          objective = cp.Minimize(cp.norm(x, 2))
+          prob = cp.Problem(objective, constraints)
+        else:
+          constraints.append(cp.norm(x, 2) <= self.epsilon)
+          prob = cp.Problem(cp.Minimize(0), constraints)
+        prob.solve()
+
+        if prob.status == 'optimal':
+          return x.value
+        else:
+          return None
+        
+    def update(self, arm, t, do_attack):
+      # update based on new sample 
+      sample = self.logged_data[arm][int(self.N[arm])]
+      self.N[arm] += 1
+      self.empirical_means[arm] = self.empirical_means[arm] + (sample - self.empirical_means[arm])/self.N[arm]
+      self.chosen_arms[t] = arm
+      self.do_attacks[t] = do_attack
+
+      # update based on last perturbation
+      for j in range(self.k):
+        if self.N[j] > 0:
+          self.empirical_rewards[j] = np.dot(self.true_means[0] + (self.perturbation if self.perturbation is not None else 0.0), self.empirical_means[j])
+
+    def run(self):
+        for t in tqdm(range(self.T)):
+            # select arm 
+            arm, do_attack = self.select_arm(t)
+            # print(f"step {t}: arm {arm} is selected and attack: {do_attack}")
+
+            # attack part
+            if t >= self.k and do_attack:
+              self.perturbation = self.find_perturbation(arm, t)
+
+            # update results
+            self.update(arm, t, do_attack)
+
+        return self.chosen_arms, self.do_attacks, self.perturbation
      
 class FindPerturbationETC:
     def __init__(self, k, m, d, target_arm, true_means, logged_data, epsilon, qp=False):

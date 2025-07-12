@@ -12,8 +12,10 @@ k, d, T, m, attack_algorithm = cfg.k, cfg.d, cfg.T, cfg.m, cfg.attack_algorithm
 if cfg.creat_new_instance:
     mu, logged_data = create_bandit_instance(k, d, cfg.n_samples, cfg.sigma)
     save_bandit_instance(mu, logged_data, cfg.bandit_instance_path)
+    print("Save new Bandit Instance")
 else:
     mu, logged_data = load_bandit_instance(cfg.bandit_instance_path)
+    print("Load Bandit Instance")
 
 
 if attack_algorithm == "ucb":
@@ -40,42 +42,47 @@ if attack_algorithm == "ucb":
     print(60*'=')
     print(60*'=')
 
-    run_ucb_with_random_perturbation(k, d, T, mu, logged_data, epsilon_attack=0.5) # run ucb with random perturbation
-    print(60*'=')
-    print(60*'=')
+    # run_ucb_with_random_perturbation(k, d, T, mu, logged_data, epsilon_attack=0.5) # run ucb with random perturbation
+    # print(60*'=')
+    # print(60*'=')
 
-    print("ABLATION 1")
-    ablation1_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5) # check all inequalities
-    print(60*'=')
-    print(60*'=')
+    # print("ABLATION 1")
+    # ablation1_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5) # check all inequalities
+    # print(60*'=')
+    # print(60*'=')
 
-    print("ABLATION 2")
-    ablation2_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5) # check only the optimal arm's inequalities to be satisfied
-    print(60*'=')
-    print(60*'=')
+    # print("ABLATION 2")
+    # ablation2_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5) # check only the optimal arm's inequalities to be satisfied
+    # print(60*'=')
+    # print(60*'=')
 
-    print("ABLATION 3")
-    ablation3_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5) # check quadratic problem
-    print(60*'=')
-    print(60*'=')
+    # print("ABLATION 3")
+    # ablation3_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5) # check quadratic problem
+    # print(60*'=')
+    # print(60*'=')
 
-    print("ABLATION 4")
-    ablation4_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5, M=10) # M alternatives attack
-    print(60*'=')
-    print(60*'=')
+    # print("ABLATION 4")
+    # ablation4_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5, M=10) # M alternatives attack
+    # print(60*'=')
+    # print(60*'=')
 
-    print("ABLATION 5")
-    ablation5_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5, targeted=True, target_arm=2) # Target Attack
-    print(60*'=')
-    print(60*'=')
+    # print("ABLATION 5")
+    # ablation5_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5, targeted=True, target_arm=2) # Target Attack
+    # print(60*'=')
+    # print(60*'=')
 
-    print("ABLATION 6")
-    ablation6_ucb(k, d, T, mu, logged_data, epsilon_attack=1/125, targeted=True, target_arm=2) # Infinity norm attack
-    print(60*'=')
-    print(60*'=')
+    # print("ABLATION 6")
+    # ablation6_ucb(k, d, T, mu, logged_data, epsilon_attack=1/125, targeted=True, target_arm=2) # Infinity norm attack
+    # print(60*'=')
+    # print(60*'=')
 
-    print("ABLATION 7")
-    ablation7_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5, targeted=True, target_arm=2) # Restricted Threat Model (Infer Mu)
+    # print("ABLATION 7")
+    # ablation7_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5, targeted=True, target_arm=2) # Restricted Threat Model (Infer Mu)
+    # print(60*'=')
+    # print(60*'=')
+
+    print("HEURISTIC 1")
+    heuristic1_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5, qp=False)
     print(60*'=')
     print(60*'=')
 
