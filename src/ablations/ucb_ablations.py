@@ -3,6 +3,7 @@ import numpy as np
 from ..adversary import FindPerturbationUCB, AdaptivePerturbationUCB
 from ..ucb import UCBAlgorithm
 from ..utils import print_norms
+from ..vis import plot_high_dim_vectors
 
 # run UCB with created perturbation
 def run_ucb_with_created_perturbation(k, d, T, mu, logged_data, perturbation):
@@ -94,6 +95,9 @@ def heuristic1_ucb(k, d, T, mu, logged_data, epsilon_attack, qp=False):
     print_norms(perturbation)
     run_ucb_with_created_perturbation(k, d, T, mu, logged_data, perturbation)
 
+    plot_high_dim_vectors(mu[0], perturbation + mu[0], dim=2, filename="heuristic1", data=mu[1:])
+    plot_high_dim_vectors(mu[0], perturbation + mu[0], dim=3, filename="heuristic1", data=mu[1:])
+
 def heuristic2_ucb(k, d, T, mu, logged_data, epsilon_attack, qp=False):
     empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
     dot_products = [np.dot(emp_mu, mu[0]) for emp_mu in empirical_mus]
@@ -107,3 +111,8 @@ def heuristic2_ucb(k, d, T, mu, logged_data, epsilon_attack, qp=False):
     print(do_attacks)
     print_norms(perturbation)
     run_ucb_with_created_perturbation(k, d, T, mu, logged_data, perturbation)
+
+
+    plot_high_dim_vectors(mu[0], perturbation + mu[0], dim=2, filename="heuristic2", data=mu[1:])
+    plot_high_dim_vectors(mu[0], perturbation + mu[0], dim=3, filename="heuristic2", data=mu[1:])
+

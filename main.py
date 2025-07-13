@@ -85,10 +85,10 @@ if attack_algorithm == "ucb":
     # print(60*'=')
     # print(60*'=')
 
-    # print("HEURISTIC 1")
-    # heuristic1_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5, qp=False)
-    # print(60*'=')
-    # print(60*'=')
+    print("HEURISTIC 1")
+    heuristic1_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5, qp=False)
+    print(60*'=')
+    print(60*'=')
 
     print("HEURISTIC 2")
     heuristic2_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5, qp=False)
