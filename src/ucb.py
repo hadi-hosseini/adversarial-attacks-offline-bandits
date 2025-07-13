@@ -18,7 +18,7 @@ class UCBAlgorithm:
         self.empirical_means = np.zeros((k, d))
         self.perturbation = perturbation
 
-    def get_reward(self, x):
+    def get_reward(self, x, t):
         return np.dot(self.true_means[0] + self.perturbation, x)
 
     def select_arm(self, t):
@@ -46,7 +46,7 @@ class UCBAlgorithm:
         for t in tqdm(range(T)):
             arm = self.select_arm(t)
             sample = self.logged_data[arm][int(self.N[arm])]
-            reward = self.get_reward(sample)
+            reward = self.get_reward(sample, t)
 
             self.update(arm, reward)
             self.empirical_means[arm] = self.empirical_means[arm] + (sample - self.empirical_means[arm])/self.N[arm]

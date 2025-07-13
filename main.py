@@ -10,6 +10,8 @@ cfg = COFNIG()
 k, d, T, m, attack_algorithm = cfg.k, cfg.d, cfg.T, cfg.m, cfg.attack_algorithm
 
 print(f"Bandit Instance with  T:{T}, K:{k}, D:{d}")
+print(60*'=')
+print(60*'=')
 
 if cfg.creat_new_instance:
     mu, logged_data = create_bandit_instance(k, d, cfg.n_samples, cfg.sigma)
@@ -83,8 +85,13 @@ if attack_algorithm == "ucb":
     # print(60*'=')
     # print(60*'=')
 
-    print("HEURISTIC 1")
-    heuristic1_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5, qp=False, hijack_traj=True)
+    # print("HEURISTIC 1")
+    # heuristic1_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5, qp=False)
+    # print(60*'=')
+    # print(60*'=')
+
+    print("HEURISTIC 2")
+    heuristic2_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5, qp=False)
     print(60*'=')
     print(60*'=')
 

@@ -128,7 +128,7 @@ class FindPerturbationUCB:
 
 
 class AdaptivePerturbationUCB:
-    def __init__(self, k, d, T, true_means, logged_data, epsilon, qp=False, hijack_traj=False):
+    def __init__(self, k, d, T, true_means, logged_data, epsilon, qp=False, target_arm=None):
         self.k = k
         self.d = d
         self.T = T
@@ -136,7 +136,7 @@ class AdaptivePerturbationUCB:
         self.logged_data = logged_data
         self.epsilon = epsilon
         self.qp = qp
-        self.hijack_traj = hijack_traj
+        self.target_arm = target_arm
 
         self.N = np.zeros(k)
         self.empirical_means = np.zeros((k, d))
@@ -151,19 +151,15 @@ class AdaptivePerturbationUCB:
         # exploration phase
         if t < self.k:
           return t, False
+        
+        upper_conf = self.empirical_rewards + np.sqrt((2 * np.log(t)) / self.N)
 
-        # target arm selection
-        upper_conf = self.empirical_rewards + np.sqrt(2 * np.log(t) / self.N)
-
-        if self.perturbation is None:
-          best_arm = np.argmax(upper_conf) 
-          if best_arm != 0:
-             return best_arm, False 
-          runner_up = np.argmax(upper_conf[1:]) + 1
-          return runner_up, True
-
+        if self.target_arm:
+          if upper_conf[self.target_arm] > upper_conf[0]:
+            return self.target_arm, False
+          return self.target_arm, True
+        
         else:
-          # Check if any arm beats arm 0
           for j in range(1, self.k):
               if upper_conf[j] > upper_conf[0]:
                   best_arm = np.argmax(upper_conf[1:]) + 1
@@ -175,22 +171,13 @@ class AdaptivePerturbationUCB:
     def find_perturbation(self, arm, t):
         x = cp.Variable(self.d)
 
-        if not self.hijack_traj:
-          d_0 = self.empirical_means[arm] - self.empirical_means[0]
-          c_0 = (math.sqrt(2 * math.log(t) / self.N[0]) - math.sqrt(2 * math.log(t) / self.N[arm])) - np.dot(self.true_means[0], d_0)
-          self.all_constraints.append((d_0, c_0))
-
-        else: 
-          for j in range(self.k):
-              if j != arm:
-                d_j = self.empirical_means[arm] - self.empirical_means[j]
-                c_j = (math.sqrt((2 * math.log(t)) / self.N[j]) - math.sqrt((2 * math.log(t)) / self.N[arm])) - np.dot(self.true_means[0], d_j)
-                self.all_constraints.append((d_j, c_j))
+        d_0 = self.empirical_means[arm] - self.empirical_means[0]
+        c_0 = (math.sqrt((2 * math.log(t)) / self.N[0]) - math.sqrt((2 * math.log(t)) / self.N[arm])) - np.dot(self.true_means[0], d_0)
+        self.all_constraints.append((d_0, c_0))
 
         constraints = []
         for (d_0, c_0) in self.all_constraints:
             constraints.append(x @ d_0 >= c_0 + 1e-6)
-
 
         # face as feasbility problem
         if self.qp:
@@ -224,7 +211,7 @@ class AdaptivePerturbationUCB:
 
     def run(self):
         for t in tqdm(range(self.T)):
-            # select arm 
+            # # select arm 
             arm, do_attack = self.select_arm(t)
             # print(f"step {t}: arm {arm} is selected and attack: {do_attack}")
 
