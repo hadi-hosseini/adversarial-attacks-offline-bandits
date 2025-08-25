@@ -4,9 +4,10 @@ import numpy as np
 from tqdm import tqdm
 import random
 import matplotlib.pyplot as plt
+import torch
 
 class UCBAlgorithm:
-    def __init__(self, k, d, true_means, logged_data, perturbation):
+    def __init__(self, k, d, true_means, logged_data, perturbation, reward_model=None, device=None):
         self.k = k
         self.d = d
         self.true_means = true_means
@@ -17,8 +18,16 @@ class UCBAlgorithm:
         self.empirical_rewards = np.zeros(k)
         self.empirical_means = np.zeros((k, d))
         self.perturbation = perturbation
+        self.reward_model = reward_model
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
     def get_reward(self, x, t):
+        if self.reward_model:
+            x = torch.from_numpy(x).float()
+            x = x.unsqueeze(0).to(self.device)   
+            with torch.no_grad():
+                reward = self.reward_model(x).item()
+            return reward
         return np.dot(self.true_means[0] + self.perturbation, x)
 
     def select_arm(self, t):

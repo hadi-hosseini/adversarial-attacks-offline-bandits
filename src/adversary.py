@@ -2,6 +2,10 @@ import numpy as np
 from tqdm import tqdm
 import math
 import cvxpy as cp
+import torch
+import copy
+
+from src.reward_architecture import fw0_and_grad, load_params_to_new_model
 
 
 def find_random_perturbation(d, epsilon):
@@ -11,7 +15,7 @@ def find_random_perturbation(d, epsilon):
 
 
 class FindPerturbationUCB:
-    def __init__(self, k, d, true_means, logged_data, epsilon, qp=False, M=1, targeted=False, target_arm=1, infinity_attack=False):
+    def __init__(self, k, d, true_means, logged_data, epsilon, qp=False, M=1, targeted=False, target_arm=1, infinity_attack=False, W=None):
         self.k = k
         self.d = d
         self.true_means = true_means
@@ -21,6 +25,7 @@ class FindPerturbationUCB:
         self.M = M # alternatives
         self.targeted = targeted
         self.infinity_attack = infinity_attack
+        self.W = W
 
         self.N = np.zeros(k)
         self.empirical_means = np.zeros((k, d))
@@ -49,7 +54,10 @@ class FindPerturbationUCB:
         x = cp.Variable(self.d)
 
         d_0 = self.empirical_means[arm] - self.empirical_means[0]
-        c_0 = (math.sqrt(2 * math.log(t) / self.N[0]) - math.sqrt(2 * math.log(t) / self.N[arm])) - np.dot(self.true_means[0], d_0)
+        if self.W is None:
+          c_0 = (math.sqrt(2 * math.log(t) / self.N[0]) - math.sqrt(2 * math.log(t) / self.N[arm])) - np.dot(self.true_means[0], d_0)
+        else:
+          c_0 = (math.sqrt(2 * math.log(t) / self.N[0]) - math.sqrt(2 * math.log(t) / self.N[arm])) - np.dot(self.W, d_0)
         self.history.append((d_0, c_0))
 
 
@@ -72,7 +80,10 @@ class FindPerturbationUCB:
         for j in range(self.k):
             if j != arm:
               d_j = self.empirical_means[arm] - self.empirical_means[j]
-              c_j = (math.sqrt((2 * math.log(t)) / self.N[j]) - math.sqrt((2 * math.log(t)) / self.N[arm])) - np.dot(self.true_means[0], d_j)
+              if self.W is None:
+                c_j = (math.sqrt((2 * math.log(t)) / self.N[j]) - math.sqrt((2 * math.log(t)) / self.N[arm])) - np.dot(self.true_means[0], d_j)
+              else:
+                c_j = (math.sqrt((2 * math.log(t)) / self.N[j]) - math.sqrt((2 * math.log(t)) / self.N[arm])) - np.dot(self.W, d_j)
               self.history.append((d_j, c_j))
 
         constraints = []
@@ -128,7 +139,7 @@ class FindPerturbationUCB:
 
 
 class AdaptivePerturbationUCB:
-    def __init__(self, k, d, T, true_means, logged_data, epsilon, qp=False, target_arm=None):
+    def __init__(self, k, d, T, true_means, logged_data, epsilon, qp=False, target_arm=None, reward_model=None):
         self.k = k
         self.d = d
         self.T = T
@@ -137,6 +148,17 @@ class AdaptivePerturbationUCB:
         self.epsilon = epsilon
         self.qp = qp
         self.target_arm = target_arm
+        self.reward_model = reward_model
+        if self.reward_model is not None:
+           w = sum(p.numel() for p in reward_model.parameters() if p.requires_grad)
+           print(f"Number of all params of the network is: {w}")
+           d = w
+           self.d = w
+           exit()
+           self.empirical_f = np.zeros(k)
+           self.empirical_grad = np.zeros((k, d))
+           self.data = [[] for _ in range(k)]
+           self.current_reward_model = copy.deepcopy(self.reward_model)
 
         self.N = np.zeros(k)
         self.empirical_means = np.zeros((k, d))
@@ -171,8 +193,12 @@ class AdaptivePerturbationUCB:
     def find_perturbation(self, arm, t):
         x = cp.Variable(self.d)
 
-        d_0 = self.empirical_means[arm] - self.empirical_means[0]
-        c_0 = (math.sqrt((2 * math.log(t)) / self.N[0]) - math.sqrt((2 * math.log(t)) / self.N[arm])) - np.dot(self.true_means[0], d_0)
+        if self.reward_model is None:
+          d_0 = self.empirical_means[arm] - self.empirical_means[0]
+          c_0 = (math.sqrt((2 * math.log(t)) / self.N[0]) - math.sqrt((2 * math.log(t)) / self.N[arm])) - np.dot(self.true_means[0], d_0)
+        else:
+          d_0 = self.empirical_grad[arm] - self.empirical_grad[0]
+          c_0 = (math.sqrt((2 * math.log(t)) / self.N[0]) - math.sqrt((2 * math.log(t)) / self.N[arm])) + (self.empirical_f[0] - self.empirical_f[arm])
         self.all_constraints.append((d_0, c_0))
 
         constraints = []
@@ -186,24 +212,44 @@ class AdaptivePerturbationUCB:
         else:
           constraints.append(cp.norm(x, 2) <= self.epsilon)
           prob = cp.Problem(cp.Minimize(0), constraints)
-        prob.solve()
+        prob.solve(verbose=False)
 
         if prob.status == 'optimal':
           return x.value
         else:
-          return None
+          print("don't find the perturbation")
+          return self.perturbation # can't find the optimal answer
         
     def update(self, arm, t, do_attack):
       # update based on new sample 
       sample = self.logged_data[arm][int(self.N[arm])]
+      self.data[arm].append(sample) # store the data
       self.N[arm] += 1
-      self.empirical_means[arm] = self.empirical_means[arm] + (sample - self.empirical_means[arm])/self.N[arm]
       self.chosen_arms[t] = arm
       self.do_attacks[t] = do_attack
 
+      if self.reward_model is not None:
+        f_x, grad_x = fw0_and_grad(self.reward_model, torch.tensor(sample, dtype=torch.float32, device='cuda'))
+        grad_x = grad_x.detach().cpu().numpy()
+
+        self.empirical_f[arm] = self.empirical_f[arm] + (f_x - self.empirical_f[arm])/self.N[arm]
+        self.empirical_grad[arm] = self.empirical_grad[arm] + (grad_x - self.empirical_grad[arm])/self.N[arm]
+        # if self.perturbation is None:
+          #  current_reward_model = copy.deepcopy(self.reward_model)
+        # else:
+        if self.perturbation is not None:
+          self.current_reward_model = load_params_to_new_model(self.reward_model, torch.tensor(self.perturbation))
+      else:
+        self.empirical_means[arm] = self.empirical_means[arm] + (sample - self.empirical_means[arm])/self.N[arm]
+
+
       # update based on last perturbation
       for j in range(self.k):
-        self.empirical_rewards[j] = np.dot(self.true_means[0] + (self.perturbation if self.perturbation is not None else np.zeros(self.d)), self.empirical_means[j])
+        if self.reward_model is None:
+          self.empirical_rewards[j] = np.dot(self.true_means[0] + (self.perturbation if self.perturbation is not None else np.zeros(self.d)), self.empirical_means[j])
+        else:
+          if len(self.data[j]) > 0:
+            self.empirical_rewards[j] = self.current_reward_model(torch.from_numpy(np.array(self.data[j], dtype=np.float32)).to(device='cuda')).mean().item()
 
       # print(f"step {t}: empirical rewards: {self.empirical_rewards}")
       # print(f"step {t}: empirical ucb: {self.empirical_rewards + np.sqrt(2 * np.log(t) / self.N)}")
