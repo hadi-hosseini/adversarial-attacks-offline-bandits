@@ -15,13 +15,13 @@ class RewardModel(nn.Module):
     def __init__(self, d, hidden_sizes=(512, 256), is_mse=True):
         super().__init__()
         self.fc1 = nn.Linear(d, hidden_sizes[0])
-        self.fc2 = nn.Linear(hidden_sizes[0], hidden_sizes[1])
-        self.fc_out = nn.Linear(hidden_sizes[1], 1)  
+        # self.fc2 = nn.Linear(hidden_sizes[0], hidden_sizes[1])
+        self.fc_out = nn.Linear(hidden_sizes[0], 1)  
         self.is_mse = is_mse
 
     def forward(self, x: torch.Tensor):
         x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
+        # x = F.relu(self.fc2(x))
         if self.is_mse:
             x = self.fc_out(x)
         else:
@@ -175,7 +175,7 @@ def train_reward_model(cfg: COFNIG):
     print("Train shape:", X_train.shape, y_train.shape)
     print("Validation shape:", X_val.shape, y_val.shape)
 
-    model = RewardModel(d=d, hidden_sizes=(512, 256), is_mse=is_mse)
+    model = RewardModel(d=d, hidden_sizes=hidden_sizes, is_mse=is_mse)
     # model = LinearRewardModel(d=d)
 
     if is_mse:

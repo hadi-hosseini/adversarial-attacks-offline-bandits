@@ -150,15 +150,15 @@ class AdaptivePerturbationUCB:
         self.target_arm = target_arm
         self.reward_model = reward_model
         if self.reward_model is not None:
-           w = sum(p.numel() for p in reward_model.parameters() if p.requires_grad)
-           print(f"Number of all params of the network is: {w}")
-           d = w
-           self.d = w
-           exit()
-           self.empirical_f = np.zeros(k)
-           self.empirical_grad = np.zeros((k, d))
-           self.data = [[] for _ in range(k)]
-           self.current_reward_model = copy.deepcopy(self.reward_model)
+          self.param_flat = torch.cat([p.view(-1) for p in reward_model.parameters()])
+          w = sum(p.numel() for p in reward_model.parameters() if p.requires_grad)
+          print(f"Number of all params of the network is: {w}")
+          d = w
+          self.d = w
+          self.empirical_f = np.zeros(k)
+          self.empirical_grad = np.zeros((k, d))
+          self.data = [[] for _ in range(k)]
+          self.current_reward_model = copy.deepcopy(self.reward_model)
 
         self.N = np.zeros(k)
         self.empirical_means = np.zeros((k, d))
@@ -167,7 +167,6 @@ class AdaptivePerturbationUCB:
         self.all_constraints = []
         self.chosen_arms = np.zeros(self.T, dtype=int)
         self.do_attacks = np.zeros(self.T, dtype=int)
-
 
     def select_arm(self, t):
         # exploration phase
@@ -234,11 +233,9 @@ class AdaptivePerturbationUCB:
 
         self.empirical_f[arm] = self.empirical_f[arm] + (f_x - self.empirical_f[arm])/self.N[arm]
         self.empirical_grad[arm] = self.empirical_grad[arm] + (grad_x - self.empirical_grad[arm])/self.N[arm]
-        # if self.perturbation is None:
-          #  current_reward_model = copy.deepcopy(self.reward_model)
-        # else:
+
         if self.perturbation is not None:
-          self.current_reward_model = load_params_to_new_model(self.reward_model, torch.tensor(self.perturbation))
+          self.current_reward_model = load_params_to_new_model(self.reward_model, self.param_flat + torch.tensor(self.perturbation, device='cuda'))
       else:
         self.empirical_means[arm] = self.empirical_means[arm] + (sample - self.empirical_means[arm])/self.N[arm]
 
@@ -250,10 +247,6 @@ class AdaptivePerturbationUCB:
         else:
           if len(self.data[j]) > 0:
             self.empirical_rewards[j] = self.current_reward_model(torch.from_numpy(np.array(self.data[j], dtype=np.float32)).to(device='cuda')).mean().item()
-
-      # print(f"step {t}: empirical rewards: {self.empirical_rewards}")
-      # print(f"step {t}: empirical ucb: {self.empirical_rewards + np.sqrt(2 * np.log(t) / self.N)}")
-      # print(10*'-')
 
     def run(self):
         for t in tqdm(range(self.T)):

@@ -8,8 +8,8 @@ from ..utils import print_norms
 from ..vis import plot_high_dim_vectors
 
 # run UCB with created perturbation
-def run_ucb_with_created_perturbation(k, d, T, mu, logged_data, perturbation, reward_model=None):
-    ucb_with_perturb = UCBAlgorithm(k, d, mu, logged_data, perturbation, reward_model=reward_model)
+def run_ucb_with_created_perturbation(k, d, T, mu, logged_data, perturbation, reward_model=None, original_reward_model=None):
+    ucb_with_perturb = UCBAlgorithm(k, d, mu, logged_data, perturbation, reward_model=reward_model, original_reward_model=original_reward_model)
     rewards, chosen_arms = ucb_with_perturb.run(T)
     print("\nNumber of pulls per arm:", ucb_with_perturb.N)
     print(chosen_arms)
@@ -95,8 +95,10 @@ def heuristic1_ucb(k, d, T, mu, logged_data, epsilon_attack, qp=False, reward_mo
     print(chosen_arms)
     print(do_attacks)
     print_norms(perturbation)
-    current_reward_model = load_params_to_new_model(reward_model, torch.tensor(perturbation))
-    run_ucb_with_created_perturbation(k, d, T, mu, logged_data, perturbation, reward_model=current_reward_model)
+    
+    param_flat = torch.cat([p.view(-1) for p in reward_model.parameters()])
+    current_reward_model = load_params_to_new_model(reward_model, param_flat + torch.tensor(perturbation, device='cuda'))
+    run_ucb_with_created_perturbation(k, d, T, mu, logged_data, perturbation, reward_model=current_reward_model, original_reward_model=reward_model)
 
     if reward_model is None:
         plot_high_dim_vectors(mu[0], perturbation + mu[0], dim=2, filename="heuristic1", data=mu[1:])

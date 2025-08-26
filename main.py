@@ -55,11 +55,10 @@ if attack_algorithm == "ucb":
         device = "cuda" if torch.cuda.is_available() else "cpu"
         save_path = cfg.reward_model_save_path
         reward_model = load_model(d, save_path, hidden_sizes=hidden_sizes, is_mse=is_mse, device=device)
-        ucb = UCBAlgorithm(k, d, mu, logged_data, perturbation, reward_model=reward_model, device=device)
+        ucb = UCBAlgorithm(k, d, mu, logged_data, perturbation, reward_model=reward_model, original_reward_model=reward_model, device=device)
         rewards, chosen_arms = ucb.run(T)
         print("\nNumber of pulls per arm:", ucb.N)
         print(chosen_arms)
-
 
     # run_ucb_without_perturbation(k, d, T, mu, logged_data) # run ucb without perturbation
     # print(60*'=')
