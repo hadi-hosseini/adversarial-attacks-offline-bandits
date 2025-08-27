@@ -9,23 +9,31 @@ from src.reward_architecture import fw0_and_grad, load_params_to_new_model
 
 
 def find_random_perturbation(d, epsilon):
+    np.random.seed(100)
     perturbation = np.random.randn(d)
     perturbation = epsilon * perturbation / np.linalg.norm(perturbation)
     return perturbation
 
 
 class FindPerturbationUCB:
-    def __init__(self, k, d, true_means, logged_data, epsilon, qp=False, M=1, targeted=False, target_arm=1, infinity_attack=False, W=None):
+    def __init__(self, k, d, true_means, logged_data, epsilon, qp=False, targeted=False, target_arm=1, reward_model=None):
         self.k = k
         self.d = d
         self.true_means = true_means
         self.logged_data = logged_data
         self.epsilon = epsilon
         self.qp = qp
-        self.M = M # alternatives
         self.targeted = targeted
-        self.infinity_attack = infinity_attack
-        self.W = W
+        self.reward_model = reward_model
+
+        if self.reward_model is not None:
+          self.param_flat = torch.cat([p.view(-1) for p in reward_model.parameters()])
+          w = sum(p.numel() for p in reward_model.parameters() if p.requires_grad)
+          print(f"Number of all params of the network is: {w}")
+          d = w
+          self.d = w
+          self.empirical_f = np.zeros(k)
+          self.empirical_grad = np.zeros((k, d))
 
         self.N = np.zeros(k)
         self.empirical_means = np.zeros((k, d))
@@ -53,13 +61,13 @@ class FindPerturbationUCB:
     def find_perturbation_optimal_only(self, arm, t):
         x = cp.Variable(self.d)
 
-        d_0 = self.empirical_means[arm] - self.empirical_means[0]
-        if self.W is None:
+        if self.reward_model is None:
+          d_0 = self.empirical_means[arm] - self.empirical_means[0]
           c_0 = (math.sqrt(2 * math.log(t) / self.N[0]) - math.sqrt(2 * math.log(t) / self.N[arm])) - np.dot(self.true_means[0], d_0)
         else:
-          c_0 = (math.sqrt(2 * math.log(t) / self.N[0]) - math.sqrt(2 * math.log(t) / self.N[arm])) - np.dot(self.W, d_0)
+          d_0 = self.empirical_grad[arm] - self.empirical_grad[0]
+          c_0 = (math.sqrt((2 * math.log(t)) / self.N[0]) - math.sqrt((2 * math.log(t)) / self.N[arm])) + (self.empirical_f[0] - self.empirical_f[arm])
         self.history.append((d_0, c_0))
-
 
         constraints = []
         for (d_0, c_0) in self.history:
@@ -72,6 +80,7 @@ class FindPerturbationUCB:
           self.all_perturbs.append(x.value)
           return x.value
         else:
+          print("don't fine perturbation")
           return None
 
     def find_perturbation(self, arm, t):
@@ -79,27 +88,22 @@ class FindPerturbationUCB:
 
         for j in range(self.k):
             if j != arm:
-              d_j = self.empirical_means[arm] - self.empirical_means[j]
-              if self.W is None:
+              if self.reward_model is None:
+                d_j = self.empirical_means[arm] - self.empirical_means[j]
                 c_j = (math.sqrt((2 * math.log(t)) / self.N[j]) - math.sqrt((2 * math.log(t)) / self.N[arm])) - np.dot(self.true_means[0], d_j)
               else:
-                c_j = (math.sqrt((2 * math.log(t)) / self.N[j]) - math.sqrt((2 * math.log(t)) / self.N[arm])) - np.dot(self.W, d_j)
+                d_j = self.empirical_grad[arm] - self.empirical_grad[j]
+                c_j = (math.sqrt((2 * math.log(t)) / self.N[j]) - math.sqrt((2 * math.log(t)) / self.N[arm])) + (self.empirical_f[j] - self.empirical_f[arm])
               self.history.append((d_j, c_j))
 
         constraints = []
         for (d_j, c_j) in self.history:
             constraints.append(x @ d_j >= c_j + 1e-6)
         if self.qp:
-          if self.infinity_attack:
-            objective = cp.Minimize(cp.norm(x, "inf"))
-          else:
-            objective = cp.Minimize(cp.norm(x, 2))
+          objective = cp.Minimize(cp.norm(x, 2))
           prob = cp.Problem(objective, constraints)
         else:
-          if self.infinity_attack:
-            constraints.append(cp.norm(x, "inf") <= self.epsilon)
-          else:
-            constraints.append(cp.norm(x, 2) <= self.epsilon)
+          constraints.append(cp.norm(x, 2) <= self.epsilon)
           prob = cp.Problem(cp.Minimize(0), constraints)
         prob.solve()
 
@@ -116,7 +120,7 @@ class FindPerturbationUCB:
         for t in tqdm(range(T)):
             arm = self.select_arm(t)
 
-            if t >= self.k and ((t-self.k) % self.M == 0):
+            if t >= self.k:
               if mode == 1: # check all inequalities
                 perturbation = self.find_perturbation(arm, t)
               elif mode == 2: # check just optimal inequalities
@@ -130,13 +134,19 @@ class FindPerturbationUCB:
 
             sample = self.logged_data[arm][int(self.N[arm])]
             self.N[arm] += 1
-            self.empirical_means[arm] = self.empirical_means[arm] + (sample - self.empirical_means[arm])/self.N[arm]
+
+            if self.reward_model is not None:
+              f_x, grad_x = fw0_and_grad(self.reward_model, torch.tensor(sample, dtype=torch.float32, device='cuda'))
+              grad_x = grad_x.detach().cpu().numpy()
+              self.empirical_f[arm] = self.empirical_f[arm] + (f_x - self.empirical_f[arm])/self.N[arm]
+              self.empirical_grad[arm] = self.empirical_grad[arm] + (grad_x - self.empirical_grad[arm])/self.N[arm]
+            else:
+              self.empirical_means[arm] = self.empirical_means[arm] + (sample - self.empirical_means[arm])/self.N[arm]
 
             chosen_arms[t] = arm
 
         return chosen_arms
     
-
 
 class AdaptivePerturbationUCB:
     def __init__(self, k, d, T, true_means, logged_data, epsilon, qp=False, target_arm=None, reward_model=None):
@@ -157,9 +167,9 @@ class AdaptivePerturbationUCB:
           self.d = w
           self.empirical_f = np.zeros(k)
           self.empirical_grad = np.zeros((k, d))
-          self.data = [[] for _ in range(k)]
           self.current_reward_model = copy.deepcopy(self.reward_model)
 
+        self.data = [[] for _ in range(k)]
         self.N = np.zeros(k)
         self.empirical_means = np.zeros((k, d))
         self.empirical_rewards = np.zeros(k)
@@ -211,13 +221,17 @@ class AdaptivePerturbationUCB:
         else:
           constraints.append(cp.norm(x, 2) <= self.epsilon)
           prob = cp.Problem(cp.Minimize(0), constraints)
-        prob.solve(verbose=False)
+
+        try:
+          prob.solve(verbose=False)
+        except cp.error.SolverError:
+          return None
 
         if prob.status == 'optimal':
           return x.value
         else:
           print("don't find the perturbation")
-          return self.perturbation # can't find the optimal answer
+          return None # can't find the optimal answer
         
     def update(self, arm, t, do_attack):
       # update based on new sample 
@@ -256,7 +270,12 @@ class AdaptivePerturbationUCB:
 
             # attack part
             if t >= self.k and do_attack:
-              self.perturbation = self.find_perturbation(arm, t)
+              status = self.find_perturbation(arm, t)
+
+              if status is None:
+                 return self.chosen_arms, self.do_attacks, self.perturbation
+              else:
+                 self.perturbation = status
 
             # update results
             self.update(arm, t, do_attack)

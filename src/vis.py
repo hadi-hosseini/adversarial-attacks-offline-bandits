@@ -81,7 +81,7 @@ def plot_high_dim_vectors(v1, v2, dim=2, filename="vector_plot", data=None):
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
-        ax.set_title("Vectors projected to 3D by PCA")
+        ax.set_title("Impact of Attack Vectors")
         ax.legend()
         plt.savefig(f"visualization/{filename}_3D.png")
         plt.close()

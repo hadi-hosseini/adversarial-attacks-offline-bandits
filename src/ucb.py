@@ -1,15 +1,12 @@
 import math
-import cvxpy as cp
 import numpy as np
 from tqdm import tqdm
-import random
-import matplotlib.pyplot as plt
 import torch
 
 from src.reward_architecture import fw0_and_grad
 
 class UCBAlgorithm:
-    def __init__(self, k, d, true_means, logged_data, perturbation, reward_model=None, original_reward_model=None, device=None):
+    def __init__(self, k, d, true_means, logged_data, perturbation, reward_model=None, device=None):
         self.k = k
         self.d = d
         self.true_means = true_means
@@ -19,14 +16,13 @@ class UCBAlgorithm:
         self.total_rewards = np.zeros(k)
         self.empirical_rewards = np.zeros(k)
         self.empirical_means = np.zeros((k, d))
+        self.reward_model = reward_model
 
-        if isinstance(perturbation, float):
+        if isinstance(perturbation, float) and self.reward_model is not None:
            w = sum(p.numel() for p in reward_model.parameters() if p.requires_grad)
            self.perturbation = np.zeros(w)
         else:
             self.perturbation = perturbation
-        self.reward_model = reward_model
-        self.original_reward_model = original_reward_model
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
@@ -36,13 +32,6 @@ class UCBAlgorithm:
             x = x.unsqueeze(0).to(self.device)   
             with torch.no_grad():
                 reward = self.reward_model(x).item()
-                print(reward)
-
-            fw0, grad = fw0_and_grad(self.original_reward_model, x)
-            grad = grad.detach().cpu().numpy()
-            print(fw0 + np.dot(self.perturbation, grad))
-            # reward = fw0 + np.dot(self.perturbation, grad)
-            print(60*'-')
                 
             return reward
         return np.dot(self.true_means[0] + self.perturbation, x)

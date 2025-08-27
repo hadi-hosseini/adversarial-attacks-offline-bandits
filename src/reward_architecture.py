@@ -12,30 +12,18 @@ from src.logged_data import load_bandit_instance
 
 
 class RewardModel(nn.Module):
-    def __init__(self, d, hidden_sizes=(512, 256), is_mse=True):
+    def __init__(self, d, hidden_sizes=(1000,), is_mse=True):
         super().__init__()
         self.fc1 = nn.Linear(d, hidden_sizes[0])
-        # self.fc2 = nn.Linear(hidden_sizes[0], hidden_sizes[1])
         self.fc_out = nn.Linear(hidden_sizes[0], 1)  
         self.is_mse = is_mse
 
     def forward(self, x: torch.Tensor):
         x = F.relu(self.fc1(x))
-        # x = F.relu(self.fc2(x))
         if self.is_mse:
             x = self.fc_out(x)
         else:
             x = torch.sigmoid(self.fc_out(x))
-        return x
-
-
-class LinearRewardModel(nn.Module):
-    def __init__(self, d):
-        super().__init__()
-        self.fc1 = nn.Linear(d, 1)
-
-    def forward(self, x: torch.Tensor):
-        x = torch.sigmoid(self.fc1(x))
         return x
 
 def train_model_bce(model, X_train, y_train, X_val, y_val, batch_size=512, epochs=100, lr=1e-3, device=None):
@@ -143,9 +131,8 @@ def save_model(model: nn.Module, path: str):
     print(f"Model weights saved to {path}")
 
 
-def load_model(d: int, path: str, hidden_sizes=(512, 256), is_mse=True, device=None):
+def load_model(d: int, path: str, hidden_sizes=(1000,), is_mse=True, device=None):
     model = RewardModel(d=d, hidden_sizes=hidden_sizes, is_mse=is_mse).to(device)
-    # model = LinearRewardModel(d=d).to(device)
 
     model.load_state_dict(torch.load(path, map_location=device))
     model.eval()
@@ -176,7 +163,6 @@ def train_reward_model(cfg: COFNIG):
     print("Validation shape:", X_val.shape, y_val.shape)
 
     model = RewardModel(d=d, hidden_sizes=hidden_sizes, is_mse=is_mse)
-    # model = LinearRewardModel(d=d)
 
     if is_mse:
         model = train_model_mse(model, X_train, y_train, X_val, y_val, batch_size=1024, epochs=100, lr=1e-3)
