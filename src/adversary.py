@@ -46,7 +46,7 @@ class FindPerturbationUCB:
     def select_arm(self, t):
         if t < self.k:
             return t
-
+        
         ### targetted
         if self.targeted:
           return self.target_arm
@@ -283,7 +283,7 @@ class AdaptivePerturbationUCB:
         return self.chosen_arms, self.do_attacks, self.perturbation
      
 class FindPerturbationETC:
-    def __init__(self, k, m, d, target_arm, true_means, logged_data, epsilon, qp=False):
+    def __init__(self, k, m, d, target_arm, true_means, logged_data, epsilon, qp=False, reward_model=None):
         self.k = k
         self.m = m
         self.d = d
@@ -292,6 +292,17 @@ class FindPerturbationETC:
         self.epsilon = epsilon
         self.qp = qp
         self.target_arm = target_arm
+        self.reward_model = reward_model
+
+        if self.reward_model is not None:
+          self.param_flat = torch.cat([p.view(-1) for p in reward_model.parameters()])
+          w = sum(p.numel() for p in reward_model.parameters() if p.requires_grad)
+          print(f"Number of all params of the network is: {w}")
+          d = w
+          self.d = w
+          self.empirical_f = np.zeros(k)
+          self.empirical_grad = np.zeros((k, d))
+          self.current_reward_model = copy.deepcopy(self.reward_model)
 
         self.N = np.zeros(k)
         self.empirical_means = np.zeros((k, d))
@@ -309,8 +320,13 @@ class FindPerturbationETC:
 
         for j in range(self.k):
             if j != arm:
-              d_j = self.empirical_means[arm] - self.empirical_means[j]
-              c_j = - np.dot(self.true_means[0], d_j)
+              if self.reward_model is None:
+                d_j = self.empirical_means[arm] - self.empirical_means[j]
+                c_j = - np.dot(self.true_means[0], d_j)
+              else:
+                d_j = self.empirical_grad[arm] - self.empirical_grad[j]
+                c_j = - (self.empirical_f[arm] - self.empirical_f[j])
+
               constraints.append(x @ d_j >= c_j + 1e-6)
 
         if self.qp:
@@ -339,7 +355,14 @@ class FindPerturbationETC:
 
             sample = self.logged_data[arm][int(self.N[arm])]
             self.N[arm] += 1
-            self.empirical_means[arm] = self.empirical_means[arm] + (sample - self.empirical_means[arm])/self.N[arm]
+
+            if self.reward_model is not None:
+              f_x, grad_x = fw0_and_grad(self.reward_model, torch.tensor(sample, dtype=torch.float32, device='cuda'))
+              grad_x = grad_x.detach().cpu().numpy()
+              self.empirical_f[arm] = self.empirical_f[arm] + (f_x - self.empirical_f[arm])/self.N[arm]
+              self.empirical_grad[arm] = self.empirical_grad[arm] + (grad_x - self.empirical_grad[arm])/self.N[arm]
+            else:
+              self.empirical_means[arm] = self.empirical_means[arm] + (sample - self.empirical_means[arm])/self.N[arm]
 
             chosen_arms[t] = arm
 

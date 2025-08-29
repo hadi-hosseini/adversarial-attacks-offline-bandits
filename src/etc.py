@@ -1,21 +1,37 @@
 import numpy as np
 from tqdm import tqdm
+import torch
 
 class ETCAlgorithm:
-    def __init__(self, k, m, d, true_means, logged_data, perturbation):
+    def __init__(self, k, m, d, true_means, logged_data, perturbation, reward_model=None):
         self.k = k
         self.m = m
         self.d = d
         self.true_means = true_means
         self.logged_data = logged_data
 
+        self.reward_model = reward_model
+
+        if isinstance(perturbation, float) and self.reward_model is not None:
+           w = sum(p.numel() for p in reward_model.parameters() if p.requires_grad)
+           self.perturbation = np.zeros(w)
+        else:
+            self.perturbation = perturbation
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+
         self.N = np.zeros(k)
         self.total_rewards = np.zeros(k)
         self.empirical_rewards = np.zeros(k)
         self.empirical_means = np.zeros((k, d))
         self.perturbation = perturbation
-
+    
     def get_reward(self, x):
+        if self.reward_model:
+            x = torch.from_numpy(x).float()
+            x = x.unsqueeze(0).to(self.device)   
+            with torch.no_grad():
+                reward = self.reward_model(x).item()
+            return reward
         return np.dot(self.true_means[0] + self.perturbation, x)
 
     def select_arm(self, t):

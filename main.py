@@ -78,11 +78,11 @@ if attack_algorithm == "ucb":
     #     print(60*'=')
     #     print(60*'=')
 
-    # print("ABLATION 1")
-    # empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
-    # ablation1_ucb(k, d, T, mu=mu, empirical_mus=empirical_mus, logged_data=logged_data, epsilon_attack=0.5) # check all inequalities
-    # print(60*'=')
-    # print(60*'=')
+    print("ABLATION 1")
+    empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
+    ablation1_ucb(k, d, T, mu=mu, empirical_mus=mu, logged_data=logged_data, epsilon_attack=0.5) # check all inequalities
+    print(60*'=')
+    print(60*'=')
 
     # print("ABLATION 1 - Attacking the Reward Model")
     # empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
@@ -93,42 +93,16 @@ if attack_algorithm == "ucb":
     # print(60*'=')
     # print(60*'=')
 
-
-    # print("ABLATION 2")
-    # ablation2_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5) # check only the optimal arm's inequalities to be satisfied
-    # print(60*'=')
-    # print(60*'=')
-
-    # print("ABLATION 3")
-    # ablation3_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5) # check quadratic problem
-    # print(60*'=')
-    # print(60*'=')
-
-    # print("ABLATION 4")
-    # ablation4_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5, M=10) # M alternatives attack
-    # print(60*'=')
-    # print(60*'=')
-
     # print("ABLATION 5")
     # ablation5_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5, targeted=True, target_arm=2) # Target Attack
     # print(60*'=')
     # print(60*'=')
 
-    # print("ABLATION 6")
-    # ablation6_ucb(k, d, T, mu, logged_data, epsilon_attack=1/125, targeted=True, target_arm=2) # Infinity norm attack
+    # print("HEURISTIC 1")
+    # empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
+    # heuristic1_ucb(k, d, T, mu=mu, empirical_mu=empirical_mus, logged_data=logged_data, epsilon_attack=0.5, qp=False) # qp=False default
     # print(60*'=')
     # print(60*'=')
-
-    # print("ABLATION 7")
-    # ablation7_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5, targeted=True, target_arm=2) # Restricted Threat Model (Infer Mu)
-    # print(60*'=')
-    # print(60*'=')
-
-    print("HEURISTIC 1")
-    empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
-    heuristic1_ucb(k, d, T, mu=mu, empirical_mu=empirical_mus, logged_data=logged_data, epsilon_attack=0.5, qp=False) # qp=False default
-    print(60*'=')
-    print(60*'=')
 
     # print("HEURISTIC 1 - Attacking the Reward Model")
     # empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
@@ -169,5 +143,16 @@ elif attack_algorithm == "etc":
     print(60*'=')
     print(60*'=')
 
-    print("ABLATION 1")
-    ablation1_etc(k, d, m, T, mu, logged_data, epsilon_attack=0.5, target_arm=2) # check all inequalities
+    # print("ABLATION 1")
+    # empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
+    # ablation1_etc(k, d, m, T, mu=mu, empirical_mus=empirical_mus, logged_data=logged_data, epsilon_attack=0.5, target_arm=2) # check all inequalities
+    # print(60*'=')
+    # print(60*'=')
+
+    empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    save_path = cfg.reward_model_save_path
+    reward_model = load_model(d, save_path, hidden_sizes=hidden_sizes, is_mse=is_mse, device=device)
+    ablation1_etc(k, d, m, T, mu=mu, empirical_mus=empirical_mus, logged_data=logged_data, epsilon_attack=0.5, target_arm=2, reward_model=reward_model) # check all inequalities
+    print(60*'=')
+    print(60*'=')
