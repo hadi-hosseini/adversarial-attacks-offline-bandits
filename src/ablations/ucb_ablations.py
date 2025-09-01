@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 from ..reward_architecture import load_params_to_new_model
-from ..adversary import FindPerturbationUCB, AdaptivePerturbationUCB
+from ..adversary import FindPerturbationUCB, OSA
 from ..ucb import UCBAlgorithm
 from ..utils import print_norms
 from ..vis import plot_high_dim_vectors
@@ -43,9 +43,10 @@ def ablation5_ucb(k, d, T, mu, logged_data, epsilon_attack, targeted, target_arm
  # Infinity norm attack
 
 def heuristic1_ucb(k, d, T, mu, empirical_mu, logged_data, epsilon_attack, qp=False, reward_model=None):
-    find_perturbation = AdaptivePerturbationUCB(k, d, T, empirical_mu, logged_data, epsilon_attack, qp=qp, reward_model=reward_model)
+    find_perturbation = OSA(k, d, T, empirical_mu, logged_data, epsilon_attack, qp=qp, reward_model=reward_model)
     chosen_arms, do_attacks, perturbation = find_perturbation.run()
     print("\nNumber of pulls per arm:", find_perturbation.N)
+    print(f"The number of attacks: {sum(do_attacks)}")
     print(chosen_arms)
     print(do_attacks)
     print_norms(perturbation)
@@ -61,22 +62,3 @@ def heuristic1_ucb(k, d, T, mu, empirical_mu, logged_data, epsilon_attack, qp=Fa
     if reward_model is None:
         plot_high_dim_vectors(mu[0], perturbation + mu[0], dim=2, filename="heuristic1", data=mu[1:])
         plot_high_dim_vectors(mu[0], perturbation + mu[0], dim=3, filename="heuristic1", data=mu[1:])
-
-def heuristic2_ucb(k, d, T, mu, logged_data, epsilon_attack, qp=False, W=None, reward_model=None):
-    empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
-    dot_products = [np.dot(emp_mu, mu[0]) for emp_mu in empirical_mus]
-    sorted_indices = np.argsort(dot_products)
-    runner_up_arm = sorted_indices[-2]
-
-    find_perturbation = AdaptivePerturbationUCB(k, d, T, mu, logged_data, epsilon_attack, qp=qp, target_arm=runner_up_arm, W=W)
-    chosen_arms, do_attacks, perturbation = find_perturbation.run()
-    print("\nNumber of pulls per arm:", find_perturbation.N)
-    print(chosen_arms)
-    print(do_attacks)
-    print_norms(perturbation)
-    run_ucb_with_created_perturbation(k, d, T, mu, logged_data, perturbation, reward_model=reward_model)
-
-
-    plot_high_dim_vectors(mu[0], perturbation + mu[0], dim=2, filename="heuristic2", data=mu[1:])
-    plot_high_dim_vectors(mu[0], perturbation + mu[0], dim=3, filename="heuristic2", data=mu[1:])
-

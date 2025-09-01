@@ -148,7 +148,7 @@ class FindPerturbationUCB:
         return chosen_arms
     
 
-class AdaptivePerturbationUCB:
+class OSA:
     def __init__(self, k, d, T, true_means, logged_data, epsilon, qp=False, target_arm=None, reward_model=None):
         self.k = k
         self.d = d
