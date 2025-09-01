@@ -46,7 +46,6 @@ def heuristic1_ucb(k, d, T, mu, empirical_mu, logged_data, epsilon_attack, qp=Fa
     find_perturbation = OSA(k, d, T, empirical_mu, logged_data, epsilon_attack, qp=qp, reward_model=reward_model)
     chosen_arms, do_attacks, perturbation = find_perturbation.run()
     print("\nNumber of pulls per arm:", find_perturbation.N)
-    print(f"The number of attacks: {sum(do_attacks)}")
     print(chosen_arms)
     print(do_attacks)
     print_norms(perturbation)

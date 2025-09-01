@@ -4,6 +4,7 @@ import math
 import cvxpy as cp
 import torch
 import copy
+import random
 
 from src.reward_architecture import fw0_and_grad, load_params_to_new_model
 
@@ -369,3 +370,89 @@ class FindPerturbationETC:
         return chosen_arms
 
 
+
+
+class OSAEpsilonGreedy:
+    def __init__(self, k, d, T, empirical_mus, logged_data, epsilon_attack, qp=False, reward_model=None):
+        self.k = k
+        self.d = d
+        self.T = T
+        self.empirical_mus = empirical_mus
+        self.logged_data = logged_data
+        self.epsilon_attack = epsilon_attack
+        self.qp = qp
+        self.epsilon = 0.1
+        self.epsilon_min = 0.01
+
+        self.N = np.zeros(k)
+        self.empirical_means = np.zeros((k, d))
+        self.empirical_rewards = np.zeros(k)
+        self.perturbation = None
+        self.is_explore = False
+        self.chosen_arms = np.zeros(self.T, dtype=int)
+        self.constraints = []
+        self.reward_model = reward_model
+
+    def select_arm(self, t):
+        if t < self.k:
+            return t
+
+        else:
+          if random.random() < self.epsilon:
+            self.is_explore = True
+            return random.randint(0, self.k - 1)
+          else:
+            self.is_explore = False
+            return self.target_arm
+
+    def find_perturbation(self, arm, t):
+        x = cp.Variable(self.d)
+        
+        d_0 = self.empirical_means[arm] - self.empirical_means[0]
+        c_0 = - np.dot(self.empirical_mus[0], d_0)
+        self.constraints.append((d_0, c_0))
+
+        constraints = []
+        for (d_0, c_0) in self.constraints:
+            constraints.append(x @ d_0 >= c_0 + 1e-6)
+
+        if self.qp:
+          objective = cp.Minimize(cp.norm(x, 2))
+          prob = cp.Problem(objective, constraints)
+        else:
+          constraints.append(cp.norm(x, 2) <= self.epsilon_attack)
+          prob = cp.Problem(cp.Minimize(0), constraints)
+        prob.solve()
+
+        if prob.status == 'optimal':
+          return x.value
+        else:
+          print("I can't find the perturbation")
+          return None
+
+
+    def update(self, arm, sample):
+        self.N[arm] += 1
+        # self.empirical_rewards[arm] = self.empirical_rewards[arm] + (reward - self.empirical_rewards[arm])/self.N[arm] # this is going to be fixed.
+        self.empirical_means[arm] = self.empirical_means[arm] + (sample - self.empirical_means[arm])/self.N[arm]
+
+
+    def run(self):
+
+        for t in tqdm(range(self.T)):
+            arm = self.select_arm(t)
+
+            if t >= self.k and not self.is_explore:
+
+              status = self.find_perturbation(arm, t)
+              if status is None:
+                return self.chosen_arms
+              self.perturbation = status
+
+            sample = self.logged_data[arm][int(self.N[arm])]
+            self.update(arm, sample)
+            self.chosen_arms[t] = arm
+
+
+        return self.chosen_arms
+    

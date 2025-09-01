@@ -1,4 +1,5 @@
 import torch
+import random
 
 from src.config import COFNIG
 from src.logged_data import create_bandit_instance, save_bandit_instance, load_bandit_instance
@@ -8,6 +9,7 @@ from src.adversary import find_random_perturbation
 from src.reward_architecture import load_model, train_reward_model
 from src.ablations.ucb_ablations import *
 from src.ablations.etc_ablations import *
+from src.ablations.epsilon_greedy_ablations import *
 
 cfg = COFNIG()
 k, d, T, m, attack_algorithm, hidden_sizes, is_mse = cfg.k, cfg.d, cfg.T, cfg.m, cfg.attack_algorithm, cfg.hidden_sizes, cfg.is_mse
@@ -140,3 +142,20 @@ elif attack_algorithm == "etc":
     ablation1_etc(k, d, m, T, mu=mu, empirical_mus=empirical_mus, logged_data=logged_data, epsilon_attack=0.5, target_arm=2, reward_model=reward_model) # check all inequalities
     print(60*'=')
     print(60*'=')
+
+
+elif attack_algorithm == "epsilon_greedy":
+    ### without reward model
+    empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
+    ablation1_epsilon_greedy(k, d, T, mu=mu, empirical_mus=empirical_mus, logged_data=logged_data, epsilon_attack=0.5, reward_model=None)
+    print(60*'=')
+    print(60*'=')
+
+    # ### with reward model
+    # empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
+    # device = "cuda" if torch.cuda.is_available() else "cpu"
+    # save_path = cfg.reward_model_save_path
+    # reward_model = load_model(d, save_path, hidden_sizes=hidden_sizes, is_mse=is_mse, device=device)
+    # ablation1_epsilon_greedy(k, d, T, mu=mu, empirical_mus=empirical_mus, logged_data=logged_data, epsilon_attack=0.5, target_arm=2, reward_model=reward_model)
+    # print(60*'=')
+    # print(60*'=')
