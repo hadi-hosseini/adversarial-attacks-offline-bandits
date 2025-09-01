@@ -177,3 +177,4 @@ pyrightconfig.json
 data
 visualization
 .vscode
+playground.py

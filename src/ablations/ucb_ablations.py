@@ -7,6 +7,19 @@ from ..ucb import UCBAlgorithm
 from ..utils import print_norms
 from ..vis import plot_high_dim_vectors
 
+
+def shuffle_samples(data, seed=42):
+    np.random.seed(seed)
+    K, n_samples, d = data.shape
+    shuffled = np.empty_like(data)
+    
+    for k in range(K):
+        idx = np.arange(n_samples)
+        np.random.shuffle(idx)   # shuffle samples
+        shuffled[k] = data[k, idx, :]
+    
+    return shuffled
+
 # run UCB with created perturbation
 def run_ucb_with_created_perturbation(k, d, T, mu, logged_data, perturbation, reward_model=None):
     ucb_with_perturb = UCBAlgorithm(k, d, mu, logged_data, perturbation, reward_model=reward_model)
@@ -42,7 +55,7 @@ def ablation5_ucb(k, d, T, mu, logged_data, epsilon_attack, targeted, target_arm
 
  # Infinity norm attack
 
-def heuristic1_ucb(k, d, T, mu, empirical_mu, logged_data, epsilon_attack, qp=False, reward_model=None):
+def heuristic1_ucb(k, d, T, mu, empirical_mu, logged_data, epsilon_attack, qp=False, reward_model=None, use_defense=True):
     find_perturbation = OSA(k, d, T, empirical_mu, logged_data, epsilon_attack, qp=qp, reward_model=reward_model)
     chosen_arms, do_attacks, perturbation = find_perturbation.run()
     print("\nNumber of pulls per arm:", find_perturbation.N)
@@ -56,6 +69,10 @@ def heuristic1_ucb(k, d, T, mu, empirical_mu, logged_data, epsilon_attack, qp=Fa
         param_flat = torch.cat([p.view(-1) for p in reward_model.parameters()])
         current_reward_model = load_params_to_new_model(reward_model, param_flat + torch.tensor(perturbation if perturbation is not None else 0.0, device='cuda'))
 
+    if use_defense:
+        np_logged_data = shuffle_samples(np.array(logged_data))
+        logged_data = np_logged_data.tolist()
+    
     run_ucb_with_created_perturbation(k, d, T, mu, logged_data, perturbation, reward_model=current_reward_model)
 
     if reward_model is None:

@@ -48,8 +48,6 @@ if attack_algorithm == "ucb":
         random_perturbation = find_random_perturbation(d, epsilon_attack)
         ucb = UCBAlgorithm(k, d, mu, logged_data, random_perturbation)
         rewards, chosen_arms = ucb.run(T)
-        ASR = ((ucb.N[1] + ucb.N[2])/99) * 100
-        print(ASR)
         print("\nNumber of pulls per arm:", ucb.N)
         print(chosen_arms)
 
@@ -103,7 +101,7 @@ if attack_algorithm == "ucb":
 
     print("HEURISTIC 1")
     empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
-    heuristic1_ucb(k, d, T, mu=mu, empirical_mu=mu, logged_data=logged_data, epsilon_attack=0.5, qp=False) # qp=False default
+    heuristic1_ucb(k, d, T, mu=mu, empirical_mu=empirical_mus, logged_data=logged_data, epsilon_attack=0.5, qp=False) # qp=False default
     print(60*'=')
     print(60*'=')
 
