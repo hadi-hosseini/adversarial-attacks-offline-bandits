@@ -55,7 +55,7 @@ def ablation5_ucb(k, d, T, mu, logged_data, epsilon_attack, targeted, target_arm
 
  # Infinity norm attack
 
-def heuristic1_ucb(k, d, T, mu, empirical_mu, logged_data, epsilon_attack, qp=False, reward_model=None, use_defense=True):
+def heuristic1_ucb(k, d, T, mu, empirical_mu, logged_data, epsilon_attack, qp=False, reward_model=None, use_defense=False):
     find_perturbation = OSA(k, d, T, empirical_mu, logged_data, epsilon_attack, qp=qp, reward_model=reward_model)
     chosen_arms, do_attacks, perturbation = find_perturbation.run()
     print("\nNumber of pulls per arm:", find_perturbation.N)
