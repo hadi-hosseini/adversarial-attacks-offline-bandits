@@ -383,7 +383,6 @@ class OSAEpsilonGreedy:
         self.qp = qp
         self.epsilon = 0.1
         self.epsilon_min = 0.01
-        random.seed(42)
 
 
         self.reward_model = reward_model
@@ -412,6 +411,7 @@ class OSAEpsilonGreedy:
             return t, False
 
         else:
+          random.seed(42)
           if random.random() < self.epsilon:
             return random.randint(0, self.k - 1), False
           else:

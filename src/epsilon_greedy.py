@@ -40,6 +40,7 @@ class EpsilonGreedyAlgorithm:
         if t < self.k:
             return t
         else:
+          random.seed(42)
           if random.random() < epsilon_t:
             return random.randint(0, self.k - 1)
           else:

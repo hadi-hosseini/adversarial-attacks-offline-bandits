@@ -5,6 +5,7 @@ from src.config import COFNIG
 from src.logged_data import create_bandit_instance, save_bandit_instance, load_bandit_instance
 from src.ucb import UCBAlgorithm
 from src.etc import ETCAlgorithm
+from src.epsilon_greedy import EpsilonGreedyAlgorithm
 from src.adversary import find_random_perturbation
 from src.reward_architecture import load_model, train_reward_model
 from src.ablations.ucb_ablations import *
@@ -145,6 +146,20 @@ elif attack_algorithm == "etc":
 
 
 elif attack_algorithm == "epsilon_greedy":
+
+    def run_epsilon_greedy_without_perturbation(k, d, T, mu, logged_data, perturbation=0.0, reward_mode=None):
+        print("run Epsilon-Greedy without perturbation")
+        epsilon_greedy = EpsilonGreedyAlgorithm(k, d, T, mu, logged_data, perturbation, reward_mode)
+        chosen_arms = epsilon_greedy.run()
+        print("\nNumber of pulls per arm:", epsilon_greedy.N)
+        print(chosen_arms)
+
+
+    run_epsilon_greedy_without_perturbation(k, d, T, mu, logged_data) # run epsilon_greedy without perturbation
+    print(60*'=')
+    print(60*'=')
+
+
     ### without reward model
     # empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
     # ablation1_epsilon_greedy(k, d, T, mu=mu, empirical_mus=empirical_mus, logged_data=logged_data, epsilon_attack=0.5, reward_model=None)
