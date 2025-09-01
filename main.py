@@ -146,16 +146,16 @@ elif attack_algorithm == "etc":
 
 elif attack_algorithm == "epsilon_greedy":
     ### without reward model
-    empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
-    ablation1_epsilon_greedy(k, d, T, mu=mu, empirical_mus=empirical_mus, logged_data=logged_data, epsilon_attack=0.5, reward_model=None)
-    print(60*'=')
-    print(60*'=')
-
-    # ### with reward model
     # empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
-    # device = "cuda" if torch.cuda.is_available() else "cpu"
-    # save_path = cfg.reward_model_save_path
-    # reward_model = load_model(d, save_path, hidden_sizes=hidden_sizes, is_mse=is_mse, device=device)
-    # ablation1_epsilon_greedy(k, d, T, mu=mu, empirical_mus=empirical_mus, logged_data=logged_data, epsilon_attack=0.5, target_arm=2, reward_model=reward_model)
+    # ablation1_epsilon_greedy(k, d, T, mu=mu, empirical_mus=empirical_mus, logged_data=logged_data, epsilon_attack=0.5, reward_model=None)
     # print(60*'=')
     # print(60*'=')
+
+    ### with reward model
+    empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    save_path = cfg.reward_model_save_path
+    reward_model = load_model(d, save_path, hidden_sizes=hidden_sizes, is_mse=is_mse, device=device)
+    ablation1_epsilon_greedy(k, d, T, mu=mu, empirical_mus=empirical_mus, logged_data=logged_data, epsilon_attack=0.5, reward_model=reward_model)
+    print(60*'=')
+    print(60*'=')

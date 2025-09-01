@@ -373,47 +373,69 @@ class FindPerturbationETC:
 
 
 class OSAEpsilonGreedy:
-    def __init__(self, k, d, T, empirical_mus, logged_data, epsilon_attack, qp=False, reward_model=None):
+    def __init__(self, k, d, T, true_means, logged_data, epsilon_attack, qp=False, reward_model=None):
         self.k = k
         self.d = d
         self.T = T
-        self.empirical_mus = empirical_mus
+        self.true_means = true_means
         self.logged_data = logged_data
         self.epsilon_attack = epsilon_attack
         self.qp = qp
         self.epsilon = 0.1
         self.epsilon_min = 0.01
+        random.seed(42)
 
+
+        self.reward_model = reward_model
+        if self.reward_model is not None:
+          self.param_flat = torch.cat([p.view(-1) for p in reward_model.parameters()])
+          w = sum(p.numel() for p in reward_model.parameters() if p.requires_grad)
+          print(f"Number of all params of the network is: {w}")
+          d = w
+          self.d = w
+          self.empirical_f = np.zeros(k)
+          self.empirical_grad = np.zeros((k, d))
+          self.current_reward_model = copy.deepcopy(self.reward_model)
+
+        self.data = [[] for _ in range(k)]
         self.N = np.zeros(k)
         self.empirical_means = np.zeros((k, d))
         self.empirical_rewards = np.zeros(k)
         self.perturbation = None
-        self.is_explore = False
         self.chosen_arms = np.zeros(self.T, dtype=int)
-        self.constraints = []
-        self.reward_model = reward_model
+        self.all_constraints = []
+        self.do_attacks = np.zeros(self.T, dtype=int)
+
 
     def select_arm(self, t):
         if t < self.k:
-            return t
+            return t, False
 
         else:
           if random.random() < self.epsilon:
-            self.is_explore = True
-            return random.randint(0, self.k - 1)
+            return random.randint(0, self.k - 1), False
           else:
-            self.is_explore = False
-            return self.target_arm
+            for j in range(1, self.k):
+                if self.empirical_rewards[j] > self.empirical_rewards[0]:
+                    best_arm = np.argmax(self.empirical_rewards[1:]) + 1
+                    return best_arm, False
+            best_arm = np.argmax(self.empirical_rewards[1:]) + 1
+            return best_arm, True
 
     def find_perturbation(self, arm, t):
         x = cp.Variable(self.d)
+
+        if self.reward_model is None:
+          d_0 = self.empirical_means[arm] - self.empirical_means[0]
+          c_0 = - np.dot(self.true_means[0], d_0)
+        else:
+          d_0 = self.empirical_grad[arm] - self.empirical_grad[0]
+          c_0 = self.empirical_f[0] - self.empirical_f[arm]
+        self.all_constraints.append((d_0, c_0))
         
-        d_0 = self.empirical_means[arm] - self.empirical_means[0]
-        c_0 = - np.dot(self.empirical_mus[0], d_0)
-        self.constraints.append((d_0, c_0))
 
         constraints = []
-        for (d_0, c_0) in self.constraints:
+        for (d_0, c_0) in self.all_constraints:
             constraints.append(x @ d_0 >= c_0 + 1e-6)
 
         if self.qp:
@@ -431,28 +453,48 @@ class OSAEpsilonGreedy:
           return None
 
 
-    def update(self, arm, sample):
-        self.N[arm] += 1
-        # self.empirical_rewards[arm] = self.empirical_rewards[arm] + (reward - self.empirical_rewards[arm])/self.N[arm] # this is going to be fixed.
+    def update(self, arm, t, do_attack):
+      sample = self.logged_data[arm][int(self.N[arm])]
+      self.data[arm].append(sample) # store the data
+      self.N[arm] += 1
+      self.chosen_arms[t] = arm
+      self.do_attacks[t] = do_attack
+
+      if self.reward_model is not None:
+        f_x, grad_x = fw0_and_grad(self.reward_model, torch.tensor(sample, dtype=torch.float32, device='cuda'))
+        grad_x = grad_x.detach().cpu().numpy()
+
+        self.empirical_f[arm] = self.empirical_f[arm] + (f_x - self.empirical_f[arm])/self.N[arm]
+        self.empirical_grad[arm] = self.empirical_grad[arm] + (grad_x - self.empirical_grad[arm])/self.N[arm]
+
+        if self.perturbation is not None:
+          self.current_reward_model = load_params_to_new_model(self.reward_model, self.param_flat + torch.tensor(self.perturbation, device='cuda'))
+      else:
         self.empirical_means[arm] = self.empirical_means[arm] + (sample - self.empirical_means[arm])/self.N[arm]
+
+
+      # update based on last perturbation
+      for j in range(self.k):
+        if self.reward_model is None:
+          self.empirical_rewards[j] = np.dot(self.true_means[0] + (self.perturbation if self.perturbation is not None else np.zeros(self.d)), self.empirical_means[j])
+        else:
+          if len(self.data[j]) > 0:
+            self.empirical_rewards[j] = self.current_reward_model(torch.from_numpy(np.array(self.data[j], dtype=np.float32)).to(device='cuda')).mean().item()
 
 
     def run(self):
 
         for t in tqdm(range(self.T)):
-            arm = self.select_arm(t)
+            arm, do_attack = self.select_arm(t)
 
-            if t >= self.k and not self.is_explore:
-
+            if t >= self.k and do_attack:
               status = self.find_perturbation(arm, t)
               if status is None:
-                return self.chosen_arms
+                return self.chosen_arms, self.do_attacks
               self.perturbation = status
 
-            sample = self.logged_data[arm][int(self.N[arm])]
-            self.update(arm, sample)
-            self.chosen_arms[t] = arm
+            self.update(arm, t, do_attack)
 
 
-        return self.chosen_arms
+        return self.chosen_arms, self.do_attacks
     

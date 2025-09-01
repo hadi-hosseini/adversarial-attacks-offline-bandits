@@ -9,7 +9,7 @@ from ..reward_architecture import load_params_to_new_model
 # run ETC with created perturbation
 def run_epsilon_greedy_with_created_perturbation(k, d, T, mu, logged_data, perturbation, reward_model=None):
     random.seed(42)
-    epsilon_greedy = EpsilonGreedyAlgorithm(k, d, T, mu, logged_data, perturbation)
+    epsilon_greedy = EpsilonGreedyAlgorithm(k, d, T, mu, logged_data, perturbation, reward_model)
     chosen_arms = epsilon_greedy.run()
     print("\nNumber of pulls per arm:", epsilon_greedy.N)
     print(chosen_arms)
@@ -18,9 +18,10 @@ def run_epsilon_greedy_with_created_perturbation(k, d, T, mu, logged_data, pertu
 def ablation1_epsilon_greedy(k, d, T, mu, empirical_mus, logged_data, epsilon_attack, reward_model=None):
     random.seed(42)
     find_perturbation = OSAEpsilonGreedy(k, d, T, empirical_mus, logged_data, epsilon_attack, qp=False, reward_model=reward_model)
-    chosen_arms = find_perturbation.run()
+    chosen_arms, do_attacks = find_perturbation.run()
     print("\nNumber of pulls per arm:", find_perturbation.N)
     print(chosen_arms)
+    print(do_attacks)
     perturbation = find_perturbation.perturbation
     print_norms(perturbation)
 
