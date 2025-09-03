@@ -48,6 +48,8 @@ if attack_algorithm == "ucb":
         random_perturbation = find_random_perturbation(d, epsilon_attack)
         ucb = UCBAlgorithm(k, d, mu, logged_data, random_perturbation)
         rewards, chosen_arms = ucb.run(T)
+        ASR = ((ucb.N[1] + ucb.N[2])/99) * 100
+        print(ASR)
         print("\nNumber of pulls per arm:", ucb.N)
         print(chosen_arms)
 
@@ -64,9 +66,9 @@ if attack_algorithm == "ucb":
         print(chosen_arms)
 
 
-    run_ucb_without_perturbation(k, d, T, mu, logged_data) # run ucb without perturbation
-    print(60*'=')
-    print(60*'=')
+    # run_ucb_without_perturbation(k, d, T, mu, logged_data) # run ucb without perturbation
+    # print(60*'=')
+    # print(60*'=')
 
 
     # run_ucb_without_perturbation_with_reward_model(k, d, T, mu, logged_data) # run ucb without perturbation; with reward model
@@ -99,20 +101,20 @@ if attack_algorithm == "ucb":
     # print(60*'=')
     # print(60*'=')
 
-    print("HEURISTIC 1")
-    empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
-    heuristic1_ucb(k, d, T, mu=mu, empirical_mu=empirical_mus, logged_data=logged_data, epsilon_attack=0.5, qp=False) # qp=False default
-    print(60*'=')
-    print(60*'=')
+    # print("HEURISTIC 1")
+    # empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
+    # heuristic1_ucb(k, d, T, mu=mu, empirical_mu=empirical_mus, logged_data=logged_data, epsilon_attack=0.5, qp=False) # qp=False default
+    # print(60*'=')
+    # print(60*'=')
 
     # print("HEURISTIC 1 - Attacking the Reward Model")
-    # empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
-    # device = "cuda" if torch.cuda.is_available() else "cpu"
-    # save_path = cfg.reward_model_save_path
-    # reward_model = load_model(d, save_path, hidden_sizes=hidden_sizes, is_mse=is_mse, device=device)
-    # heuristic1_ucb(k, d, T, mu=mu, empirical_mu=empirical_mus, logged_data=logged_data, epsilon_attack=0.5, qp=False, reward_model=reward_model)
-    # print(60*'=')
-    # print(60*'=')
+    empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    save_path = cfg.reward_model_save_path
+    reward_model = load_model(d, save_path, hidden_sizes=hidden_sizes, is_mse=is_mse, device=device)
+    heuristic1_ucb(k, d, T, mu=mu, empirical_mu=empirical_mus, logged_data=logged_data, epsilon_attack=0.5, qp=False, reward_model=reward_model)
+    print(60*'=')
+    print(60*'=')
 
 
 elif attack_algorithm == "etc":
