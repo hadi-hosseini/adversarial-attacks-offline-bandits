@@ -2,11 +2,14 @@ import math
 import numpy as np
 from tqdm import tqdm
 import torch
+import torchvision.transforms as T
+from PIL import Image
+import clip
 
 from src.reward_architecture import fw0_and_grad
 
 class UCBAlgorithm:
-    def __init__(self, k, d, true_means, logged_data, perturbation, reward_model=None, device=None):
+    def __init__(self, k, d, true_means, logged_data, perturbation, reward_model=None, device=None, real_data=False):
         self.k = k
         self.d = d
         self.true_means = true_means
@@ -17,6 +20,11 @@ class UCBAlgorithm:
         self.empirical_rewards = np.zeros(k)
         self.empirical_means = np.zeros((k, d))
         self.reward_model = reward_model
+        self.real_data = real_data
+
+        if self.real_data:
+            self.encoder_model, self.encoder_preprocess = clip.load("ViT-B/32", device='cuda')
+
 
         if isinstance(perturbation, float) and self.reward_model is not None:
            w = sum(p.numel() for p in reward_model.parameters() if p.requires_grad)
@@ -28,11 +36,20 @@ class UCBAlgorithm:
 
     def get_reward(self, x, t):
         if self.reward_model:
-            x = torch.from_numpy(x).float()
-            x = x.unsqueeze(0).to(self.device)   
+            if not self.real_data:
+                x = torch.from_numpy(x).float()
+                x = x.unsqueeze(0).to(self.device)  
+            else:
+                # x = Image.open(x).convert("RGB")
+                # transform = T.Compose([T.ToTensor()])
+                # x = transform(x)
+                # x = x.view(-1)
+                x = self.encoder_preprocess(Image.open(x)).unsqueeze(0).to('cuda')
+                with torch.no_grad():
+                    x = self.encoder_model.encode_image(x).view(-1)
+                x = x.unsqueeze(0).to(self.device, dtype=torch.float32) 
             with torch.no_grad():
                 reward = self.reward_model(x).item()
-                
             return reward
         return np.dot(self.true_means[0] + self.perturbation, x)
 
@@ -64,7 +81,8 @@ class UCBAlgorithm:
             reward = self.get_reward(sample, t)
 
             self.update(arm, reward)
-            self.empirical_means[arm] = self.empirical_means[arm] + (sample - self.empirical_means[arm])/self.N[arm]
+            if not self.real_data:
+                self.empirical_means[arm] = self.empirical_means[arm] + (sample - self.empirical_means[arm])/self.N[arm]
 
             rewards[t] = reward
             chosen_arms[t] = arm

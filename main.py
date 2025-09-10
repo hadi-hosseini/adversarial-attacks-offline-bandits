@@ -101,20 +101,23 @@ if attack_algorithm == "ucb":
     # print(60*'=')
     # print(60*'=')
 
-    # print("HEURISTIC 1")
-    # empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
-    # heuristic1_ucb(k, d, T, mu=mu, empirical_mu=empirical_mus, logged_data=logged_data, epsilon_attack=0.5, qp=False) # qp=False default
-    # print(60*'=')
-    # print(60*'=')
+    # print("OSA")
 
-    # print("HEURISTIC 1 - Attacking the Reward Model")
-    empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    save_path = cfg.reward_model_save_path
-    reward_model = load_model(d, save_path, hidden_sizes=hidden_sizes, is_mse=is_mse, device=device)
-    heuristic1_ucb(k, d, T, mu=mu, empirical_mu=empirical_mus, logged_data=logged_data, epsilon_attack=0.5, qp=False, reward_model=reward_model)
-    print(60*'=')
-    print(60*'=')
+    for k in range(35, 75, 5):
+        print(f"K: {k}")
+        empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
+        heuristic1_ucb(k, d, T, mu=mu, empirical_mu=mu, logged_data=logged_data, epsilon_attack=0.5, qp=True) # qp=False default
+        print(60*'=')
+        print(60*'=')
+
+    # print("OSA - Attacking the Reward Model")
+    # empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
+    # device = "cuda" if torch.cuda.is_available() else "cpu"
+    # save_path = cfg.reward_model_save_path
+    # reward_model = load_model(d, save_path, hidden_sizes=hidden_sizes, is_mse=is_mse, device=device)
+    # heuristic1_ucb(k, d, T, mu=mu, empirical_mu=empirical_mus, logged_data=logged_data, epsilon_attack=0.5, qp=False, reward_model=reward_model)
+    # print(60*'=')
+    # print(60*'=')
 
 
 elif attack_algorithm == "etc":

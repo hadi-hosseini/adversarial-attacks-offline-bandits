@@ -5,6 +5,9 @@ import cvxpy as cp
 import torch
 import copy
 import random
+import torchvision.transforms as Transform
+from PIL import Image
+import clip
 
 from src.reward_architecture import fw0_and_grad, load_params_to_new_model
 
@@ -17,7 +20,7 @@ def find_random_perturbation(d, epsilon):
 
 
 class FindPerturbationUCB:
-    def __init__(self, k, d, true_means, logged_data, epsilon, qp=False, targeted=False, target_arm=1, reward_model=None):
+    def __init__(self, k, d, true_means, logged_data, epsilon, qp=False, targeted=False, target_arm=1, reward_model=None, real_data=False):
         self.k = k
         self.d = d
         self.true_means = true_means
@@ -26,6 +29,9 @@ class FindPerturbationUCB:
         self.qp = qp
         self.targeted = targeted
         self.reward_model = reward_model
+        self.real_data = real_data
+        if self.real_data: 
+          self.encoder_model, self.encoder_preprocess = clip.load("ViT-B/32", device='cuda')
 
         if self.reward_model is not None:
           self.param_flat = torch.cat([p.view(-1) for p in reward_model.parameters()])
@@ -134,6 +140,13 @@ class FindPerturbationUCB:
               self.perturbation = perturbation
 
             sample = self.logged_data[arm][int(self.N[arm])]
+
+
+            if self.real_data:
+              image = self.encoder_preprocess(Image.open(sample)).unsqueeze(0).to('cuda')
+              with torch.no_grad():
+                sample = self.encoder_model.encode_image(image).view(-1)
+
             self.N[arm] += 1
 
             if self.reward_model is not None:
@@ -150,7 +163,7 @@ class FindPerturbationUCB:
     
 
 class OSA:
-    def __init__(self, k, d, T, true_means, logged_data, epsilon, qp=False, target_arm=None, reward_model=None):
+    def __init__(self, k, d, T, true_means, logged_data, epsilon, qp=False, target_arm=None, reward_model=None, real_data=False):
         self.k = k
         self.d = d
         self.T = T
@@ -160,6 +173,9 @@ class OSA:
         self.qp = qp
         self.target_arm = target_arm
         self.reward_model = reward_model
+        self.real_data = real_data
+        if self.real_data: 
+          self.encoder_model, self.encoder_preprocess = clip.load("ViT-B/32", device='cuda')
         if self.reward_model is not None:
           self.param_flat = torch.cat([p.view(-1) for p in reward_model.parameters()])
           w = sum(p.numel() for p in reward_model.parameters() if p.requires_grad)
@@ -237,6 +253,14 @@ class OSA:
     def update(self, arm, t, do_attack):
       # update based on new sample 
       sample = self.logged_data[arm][int(self.N[arm])]
+
+      if self.real_data:
+        image = self.encoder_preprocess(Image.open(sample)).unsqueeze(0).to('cuda')
+        with torch.no_grad():
+          sample = self.encoder_model.encode_image(image).view(-1)
+          sample = sample.cpu()
+
+
       self.data[arm].append(sample) # store the data
       self.N[arm] += 1
       self.chosen_arms[t] = arm
@@ -261,7 +285,10 @@ class OSA:
           self.empirical_rewards[j] = np.dot(self.true_means[0] + (self.perturbation if self.perturbation is not None else np.zeros(self.d)), self.empirical_means[j])
         else:
           if len(self.data[j]) > 0:
-            self.empirical_rewards[j] = self.current_reward_model(torch.from_numpy(np.array(self.data[j], dtype=np.float32)).to(device='cuda')).mean().item()
+            if not self.real_data:
+              self.empirical_rewards[j] = self.current_reward_model(torch.from_numpy(np.array(self.data[j], dtype=np.float32)).to(device='cuda')).mean().item()
+            else:
+              self.empirical_rewards[j] = self.current_reward_model(torch.from_numpy(np.array(self.data[j], dtype=np.float32)).to(device='cuda')).mean().item()
 
     def run(self):
         for t in tqdm(range(self.T)):
