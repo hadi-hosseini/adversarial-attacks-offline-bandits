@@ -6,7 +6,7 @@ from src.config import COFNIG
 from src.ucb import UCBAlgorithmRandomRewardModel
 from src.reward_architecture import RewardModel
 from src.ablations.ucb_ablations import *
-from src.utils import read_json
+from src.utils import read_json, set_seed
 
 cfg = COFNIG()
 k, d, T, m, attack_algorithm, hidden_sizes, is_mse = cfg.k, cfg.d, cfg.T, cfg.m, cfg.attack_algorithm, cfg.hidden_sizes, cfg.is_mse
@@ -19,7 +19,7 @@ prompt_id = 3
 prompts = read_json("models/prompts.json")
 prompt = prompts[prompt_id - 1]['prompt']
 
-models = ['sd1_4', 'kandinsky', 'sdxl']
+models = ['openjourney', 'sd1_4', 'kandinsky', 'sdxl']
 logged_data = []
 
 for model in models:
@@ -30,6 +30,7 @@ for model in models:
 
 
 d = 512
+set_seed()
 reward_model = RewardModel(d=d, hidden_sizes=hidden_sizes, is_mse=is_mse).to('cuda')
 
 if attack_algorithm == "ucb":
@@ -48,16 +49,19 @@ if attack_algorithm == "ucb":
     print(60*'=')
 
 
-    # print("Full Trajectory - Attacking the Reward Model")
-    # device = "cuda" if torch.cuda.is_available() else "cpu"
-    # ablation1_ucb(k, d, T, mu=None, empirical_mus=None, logged_data=logged_data, epsilon_attack=0.5, reward_model=reward_model, real_data=True)
+    # print("Full Trajectory Attacking")
+    # full_trajectory_random_reward_model(k, d, T, logged_data=logged_data, epsilon_attack=0.5, reward_model=reward_model)
+    # print(60*'=')
+    # print(60*'=')
+
+    # print("Trajectory-Free Attacking")
+    # trajectory_free_random_reward_model(k, d, T, logged_data=logged_data, epsilon_attack=0.5, reward_model=reward_model)
     # print(60*'=')
     # print(60*'=')
 
 
-    print("OSA - Attacking the Reward Model")
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print("OSA Attacking")
     save_path = cfg.reward_model_save_path
-    osa_ucb_random_reward_model(k, d, T, logged_data=logged_data, epsilon_attack=0.5, qp=False, reward_model=reward_model)
+    osa_random_reward_model(k, d, T, logged_data=logged_data, epsilon_attack=0.5, qp=False, reward_model=reward_model)
     print(60*'=')
     print(60*'=')

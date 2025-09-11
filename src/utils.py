@@ -1,6 +1,8 @@
 from .ucb import UCBAlgorithm
 import numpy as np
 import json
+import random
+import torch
 
 def print_norms(x):
     norm_two = np.linalg.norm(x)
@@ -19,3 +21,16 @@ def read_json(file_path):
     with open(file_path, "r", encoding="utf-8") as f:
         data = json.load(f)
     return data
+
+
+def set_seed(seed: int = 42):
+    random.seed(seed)
+
+    np.random.seed(seed)
+
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed) 
+
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False

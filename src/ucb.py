@@ -90,9 +90,6 @@ class UCBAlgorithm:
 
         return rewards, chosen_arms
 
-
-
-
 class UCBAlgorithmRandomRewardModel:
     def __init__(self, k, d, logged_data, perturbation, reward_model=None):
         self.k = k
