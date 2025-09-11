@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 from ..reward_architecture import load_params_to_new_model
-from ..adversary import FindPerturbationUCB, OSA, OSAImageReward, OSARandomRewardModel, FullTrajectoryUCBAlgorithmImageReward
+from ..adversary import FindPerturbationUCB, OSA, OSAImageReward, OSARandomRewardModel, FullTrajectoryUCBAlgorithmImageReward, TrajectoryFreeUCBAlgorithmImageReward
 from ..ucb import UCBAlgorithm, UCBAlgorithmImageReward, UCBAlgorithmRandomRewardModel
 from ..utils import print_norms
 from ..vis import plot_high_dim_vectors
@@ -44,22 +44,6 @@ def ablation1_ucb(k, d, T, mu, empirical_mus, logged_data, epsilon_attack, rewar
     run_ucb_with_created_perturbation(k, d, T, mu, logged_data, perturbation, reward_model=current_reward_model, real_data=real_data)
 
 
-def full_trajectory_image_reward(k, d, T, logged_data, epsilon_attack, mlp=None, model=None, backbone=None, prompt=None):
-    find_perturbation = FullTrajectoryUCBAlgorithmImageReward(k, d, logged_data, epsilon_attack, qp=False, mlp=mlp, model=model, backbone=backbone, prompt=prompt)
-    chosen_arms = find_perturbation.run(T)
-    print("\nNumber of pulls per arm:", find_perturbation.N)
-    print(chosen_arms)
-    perturbation = find_perturbation.perturbation
-    print_norms(perturbation)
-
-    param_flat = torch.cat([p.view(-1) for p in mlp.parameters()])
-    current_reward_model = load_params_to_new_model(mlp, param_flat + torch.tensor(perturbation, device='cuda'))
-    ucb_with_perturb = UCBAlgorithmImageReward(k, d, logged_data, perturbation, mlp=current_reward_model, model=model, backbone=backbone, prompt=prompt)
-    _, chosen_arms = ucb_with_perturb.run(T)
-    print("\nNumber of pulls per arm:", ucb_with_perturb.N)
-    print(chosen_arms)
-
-
 # ablation 5 (targeted attack)
 def ablation5_ucb(k, d, T, mu, logged_data, epsilon_attack, targeted, target_arm):
     find_perturbation = FindPerturbationUCB(k, d, mu, logged_data, epsilon_attack, qp=False, targeted=targeted, target_arm=target_arm)
@@ -97,6 +81,38 @@ def heuristic1_ucb(k, d, T, mu, empirical_mu, logged_data, epsilon_attack, qp=Fa
         plot_high_dim_vectors(mu[0], perturbation + mu[0], dim=3, filename="heuristic1", data=mu[1:])
 
 
+#### Image Reward ####
+
+def full_trajectory_image_reward(k, d, T, logged_data, epsilon_attack, mlp=None, model=None, backbone=None, prompt=None):
+    find_perturbation = FullTrajectoryUCBAlgorithmImageReward(k, d, logged_data, epsilon_attack, qp=False, mlp=mlp, model=model, backbone=backbone, prompt=prompt)
+    chosen_arms = find_perturbation.run(T)
+    print("\nNumber of pulls per arm:", find_perturbation.N)
+    print(chosen_arms)
+    perturbation = find_perturbation.perturbation
+    print_norms(perturbation)
+
+    param_flat = torch.cat([p.view(-1) for p in mlp.parameters()])
+    current_reward_model = load_params_to_new_model(mlp, param_flat + torch.tensor(perturbation, device='cuda'))
+    ucb_with_perturb = UCBAlgorithmImageReward(k, d, logged_data, perturbation, mlp=current_reward_model, model=model, backbone=backbone, prompt=prompt)
+    _, chosen_arms = ucb_with_perturb.run(T)
+    print("\nNumber of pulls per arm:", ucb_with_perturb.N)
+    print(chosen_arms)
+
+def trajectory_free_image_reward(k, d, T, logged_data, epsilon_attack, mlp=None, model=None, backbone=None, prompt=None):
+    find_perturbation = TrajectoryFreeUCBAlgorithmImageReward(k, d, logged_data, epsilon_attack, qp=False, mlp=mlp, model=model, backbone=backbone, prompt=prompt)
+    chosen_arms = find_perturbation.run(T)
+    print("\nNumber of pulls per arm:", find_perturbation.N)
+    print(chosen_arms)
+    perturbation = find_perturbation.perturbation
+    print_norms(perturbation)
+
+    param_flat = torch.cat([p.view(-1) for p in mlp.parameters()])
+    current_reward_model = load_params_to_new_model(mlp, param_flat + torch.tensor(perturbation, device='cuda'))
+    ucb_with_perturb = UCBAlgorithmImageReward(k, d, logged_data, perturbation, mlp=current_reward_model, model=model, backbone=backbone, prompt=prompt)
+    _, chosen_arms = ucb_with_perturb.run(T)
+    print("\nNumber of pulls per arm:", ucb_with_perturb.N)
+    print(chosen_arms)
+
 def osa_ucb_image_reward(k, d, T, logged_data, epsilon_attack, qp=False, mlp=None, model=None, backbone=None, prompt=None):
     find_perturbation = OSAImageReward(k, d, T, logged_data, epsilon_attack, qp=qp, mlp=mlp, model=model, backbone=backbone, prompt=prompt)
     chosen_arms, do_attacks, perturbation = find_perturbation.run()
@@ -113,6 +129,8 @@ def osa_ucb_image_reward(k, d, T, logged_data, epsilon_attack, qp=False, mlp=Non
     print("\nNumber of pulls per arm:", ucb_with_perturb.N)
     print(chosen_arms)
 
+
+### Random Reward Model ###
 
 def osa_ucb_random_reward_model(k, d, T, logged_data, epsilon_attack, qp=False, reward_model=None):
     find_perturbation = OSARandomRewardModel(k, d, T, logged_data, epsilon_attack, qp=qp, reward_model=reward_model)

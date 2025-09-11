@@ -21,8 +21,8 @@ prompts = read_json("models/prompts.json")
 prompt = prompts[prompt_id - 1]['prompt']
 
 
-## 'kandinsky', 'sdxl', 'sd1_4', 'openjourneny', 'sd3'
-models = ['sd1_4', 'kandinsky', 'sdxl']
+## 'sd3'
+models = ['openjourney', 'sd1_4', 'kandinsky', 'sdxl']
 logged_data = []
 
 for model in models:
@@ -48,7 +48,6 @@ for param in mlp.parameters():
     model.device = device
 
 
-    
 # run UCB without perturbation and with reward model
 def run_ucb_without_perturbation_with_reward_model(k, d, T, logged_data, perturbation=0.0):
     print("run UCB without perturbation; with reward model")
@@ -64,15 +63,20 @@ print(60*'=')
 print(60*'=')
 
 
-print("Full Trajectory - Attacking the Reward Model")
-full_trajectory_image_reward(k, d, T, logged_data=logged_data, epsilon_attack=0.5, mlp=mlp, model=model, backbone=backbone, prompt=prompt)
-print(60*'=')
-print(60*'=')
-
-
-# print("OSA - Attacking the Reward Model")
-# device = "cuda" if torch.cuda.is_available() else "cpu"
-# save_path = cfg.reward_model_save_path
-# osa_ucb_image_reward(k, d, T, logged_data=logged_data, epsilon_attack=0.5, qp=False, mlp=mlp, model=model, backbone=backbone, prompt=prompt)
+# print("Full Trajectory - Attacking")
+# full_trajectory_image_reward(k, d, T, logged_data=logged_data, epsilon_attack=0.5, mlp=mlp, model=model, backbone=backbone, prompt=prompt)
 # print(60*'=')
 # print(60*'=')
+
+# print("Trajectory-Free - Attacking")
+# trajectory_free_image_reward(k, d, T, logged_data=logged_data, epsilon_attack=0.5, mlp=mlp, model=model, backbone=backbone, prompt=prompt)
+# print(60*'=')
+# print(60*'=')
+
+
+print("OSA - Attacking")
+device = "cuda" if torch.cuda.is_available() else "cpu"
+save_path = cfg.reward_model_save_path
+osa_ucb_image_reward(k, d, T, logged_data=logged_data, epsilon_attack=0.5, qp=False, mlp=mlp, model=model, backbone=backbone, prompt=prompt)
+print(60*'=')
+print(60*'=')
