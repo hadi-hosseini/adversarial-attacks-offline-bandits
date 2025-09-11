@@ -1170,3 +1170,138 @@ class TrajectoryFreeUCBAlgorithmRandomRewardModel:
             chosen_arms[t] = arm
 
         return chosen_arms
+
+
+
+### Aesthetic
+class OSAAesthetic:
+    def __init__(self, k, d, T, logged_data, epsilon, qp=False, target_arm=None, mlp=None, model=None, preprocess=None):
+        self.k = k
+        self.d = d
+        self.T = T
+        self.logged_data = logged_data
+        self.epsilon = epsilon
+        self.qp = qp
+        self.target_arm = target_arm
+        self.reward_model = mlp
+        self.preprocess = preprocess
+        self.model = model
+        
+        self.param_flat = torch.cat([p.view(-1) for p in self.reward_model.parameters()])
+        w = sum(p.numel() for p in self.reward_model.parameters() if p.requires_grad)
+        print(f"Number of all params of the network is: {w}")
+        d = w
+        self.d = w
+        self.empirical_f = np.zeros(k)
+        self.empirical_grad = np.zeros((k, d))
+        self.current_reward_model = copy.deepcopy(self.reward_model)
+
+        self.data = [[] for _ in range(k)]
+        self.N = np.zeros(k)
+        self.empirical_rewards = np.zeros(k)
+        self.perturbation = None
+        self.all_constraints = []
+        self.chosen_arms = np.zeros(self.T, dtype=int)
+        self.do_attacks = np.zeros(self.T, dtype=int)
+
+    def select_arm(self, t):
+        # exploration phase
+        if t < self.k:
+          return t, False
+        
+        upper_conf = self.empirical_rewards + np.sqrt((2 * np.log(t)) / self.N)
+
+        if self.target_arm:
+          if upper_conf[self.target_arm] > upper_conf[0]:
+            return self.target_arm, False
+          return self.target_arm, True
+        
+        else:
+          for j in range(1, self.k):
+              if upper_conf[j] > upper_conf[0]:
+                  best_arm = np.argmax(upper_conf[1:]) + 1
+                  return best_arm, False
+          best_arm = np.argmax(upper_conf[1:]) + 1
+          return best_arm, True
+
+    # do perturbation attack
+    def find_perturbation(self, arm, t):
+        x = cp.Variable(self.d)
+        d_0 = self.empirical_grad[arm] - self.empirical_grad[0]
+        c_0 = (math.sqrt((2 * math.log(t)) / self.N[0]) - math.sqrt((2 * math.log(t)) / self.N[arm])) + (self.empirical_f[0] - self.empirical_f[arm])
+        self.all_constraints.append((d_0, c_0))
+
+        constraints = []
+        for (d_0, c_0) in self.all_constraints:
+            constraints.append(x @ d_0 >= c_0 + 1e-6)
+
+        # face as feasbility problem
+        if self.qp:
+          objective = cp.Minimize(cp.norm(x, 2))
+          prob = cp.Problem(objective, constraints)
+        else:
+          constraints.append(cp.norm(x, 2) <= self.epsilon)
+          prob = cp.Problem(cp.Minimize(0), constraints)
+
+        try:
+          prob.solve(verbose=False)
+        except cp.error.SolverError:
+          return None
+
+        if prob.status == 'optimal':
+          return x.value
+        else:
+          print("I DO NOT FIND PERTURBATION!!!")
+          return None
+        
+    def update(self, arm, t, do_attack):
+      # update based on new sample 
+      sample = self.logged_data[arm][int(self.N[arm])]
+
+      image = self.preprocess(Image.open(sample)).unsqueeze(0).to('cuda')
+      with torch.no_grad():
+        image_features = self.model.encode_image(image)
+        image_features /= image_features.norm(dim=-1, keepdim=True)
+        sample = image_features.cpu()
+
+      self.data[arm].append(sample) # store the data
+      self.N[arm] += 1
+      self.chosen_arms[t] = arm
+      self.do_attacks[t] = do_attack
+
+      if self.reward_model is not None:
+        f_x, grad_x = fw0_and_grad(self.reward_model, torch.tensor(sample, dtype=torch.float32, device='cuda'))
+        grad_x = grad_x.detach().cpu().numpy()
+
+        self.empirical_f[arm] = self.empirical_f[arm] + (f_x - self.empirical_f[arm])/self.N[arm]
+        self.empirical_grad[arm] = self.empirical_grad[arm] + (grad_x - self.empirical_grad[arm])/self.N[arm]
+
+        if self.perturbation is not None:
+          self.current_reward_model = load_params_to_new_model(self.reward_model, self.param_flat + torch.tensor(self.perturbation, device='cuda'))
+
+
+      # update based on last perturbation
+      for j in range(self.k):
+        if len(self.data[j]) > 0:
+          self.empirical_rewards[j] = self.current_reward_model(torch.from_numpy(np.array(self.data[j], dtype=np.float32)).to(device='cuda')).mean().item()
+          # self.empirical_rewards[j] = (self.empirical_rewards[j] - self.model.mean) / self.model.std
+
+
+    def run(self):
+        for t in tqdm(range(self.T)):
+            # # select arm 
+            arm, do_attack = self.select_arm(t)
+
+            # attack part
+            if t >= self.k and do_attack:
+              status = self.find_perturbation(arm, t)
+
+              if status is None:
+                 return self.chosen_arms, self.do_attacks, self.perturbation
+              else:
+                 self.perturbation = status
+
+            # update results
+            self.update(arm, t, do_attack)
+
+        return self.chosen_arms, self.do_attacks, self.perturbation

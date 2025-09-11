@@ -4,6 +4,17 @@ from lavis.models.base_model import tile
 import torch.nn.functional as F
 from PIL import Image
 
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
+from src.reward_architecture import fw0_and_grad
+
+# def predict_answer(samples,  answer_list, num_ans_candidates=2):
+#     if isinstance(samples["text_input"], str):
+#         samples["text_input"] = [samples["text_input"]]
+#     num_ans_candidates = min(num_ans_candidates, len(answer_list))
+#     return custom_rank_answers(samples, answer_list, num_ans_candidates)
+
+
 def custom_rank_answers(self, samples, answer_list, num_ans_candidates):
     answer_candidates = self.tokenizer(
         answer_list, padding="longest", return_tensors="pt"
@@ -80,14 +91,15 @@ class VQAModel:
             name="blip_vqa", model_type="vqav2", is_eval=True, device=device
         )
         self.blip_model._rank_answers = custom_rank_answers.__get__(self.blip_model, type(self.blip_model))
-        
-        # # Freeze everything
-        # for param in self.blip_model.parameters():
-        #     param.requires_grad = False
 
-        # # Unfreeze only the linear decoder (prediction layer)
-        # for param in self.blip_model.text_decoder.cls.predictions.decoder.parameters():
-        #     param.requires_grad = True
+        self.cls =  self.blip_model.text_decoder.cls
+
+        for param in self.blip_model.parameters():
+            param.requires_grad = False
+
+        for param in self.blip_model.text_decoder.cls.parameters():
+            param.requires_grad = True
+        
 
     def get_score(self, image, question):
         image_ = self.vis_processors["eval"](image).unsqueeze(0).to(self.device)
@@ -102,14 +114,55 @@ class VQAModel:
             )
         pos_score, _ = vqa_pred[1][0][0], vqa_pred[1][0][1]
         return pos_score
+    
+
+    def get_cls_input(self, image, question):
+        """Return the hidden states that go into the CLS head"""
+        image_ = self.vis_processors["eval"](image).unsqueeze(0).to(self.device)
+        question_ = self.txt_processors["eval"](question)
+
+        samples = {"image": image_, "text_input": question_}
+        question_output, _ = self.blip_model.forward_encoder(samples)
+        question_states = question_output.last_hidden_state
+
+        tokenized_question = samples["text_input"]
+        # Ensure it's tokenized properly for the decoder
+        if isinstance(tokenized_question, str):
+            tokenized_question = self.blip_model.tokenizer(tokenized_question, return_tensors="pt").to(self.device)
+
+        # Pass through text decoder BERT
+        decoder_output = self.blip_model.text_decoder.bert(
+            input_ids=tokenized_question.input_ids,
+            attention_mask=tokenized_question.attention_mask,
+            encoder_hidden_states=question_states,
+            encoder_attention_mask=None,
+            return_dict=True
+        )
+        hidden_states = decoder_output.last_hidden_state  # <-- input to cls head
+        return hidden_states
 
 
-# ---------------------
-# Example usage
-# ---------------------
-image = Image.open("sdxl/1/0.png")
-question = "What is happening on the branch where two birds are perched, one chirping happily and the other listening silently?"
+
+image = Image.open("data/generative_models/sdxl/1/0.png")
+question = "Are there birds in the image?"
 
 vqa_model = VQAModel('cuda')
 score = vqa_model.get_score(image, question)
 print(score)
+hidden_state = vqa_model.get_cls_input(image, question)
+
+f_w0 = vqa_model.cls(hidden_state).squeeze()
+
+
+
+exit()
+params = [p for p in vqa_model.cls.parameters() if p.requires_grad]
+grads = torch.autograd.grad(f_w0[0,0,yes_token_id], params, retain_graph=False, create_graph=False)
+grad_flat = torch.cat([g.reshape(-1) for g in grads])
+
+
+# f_x, grad_x = fw0_and_grad(vqa_model.cls, torch.tensor(hidden_state, dtype=torch.float32, device='cuda'))
+# print(grad_x)
+# print(f_x)
+# print(score)
+

@@ -2,8 +2,8 @@ import numpy as np
 import torch
 
 from ..reward_architecture import load_params_to_new_model
-from ..adversary import FindPerturbationUCB, OSA, OSAImageReward, OSARandomRewardModel, FullTrajectoryUCBAlgorithmImageReward, TrajectoryFreeUCBAlgorithmImageReward, FullTrajectoryUCBAlgorithmRandomRewardModel, TrajectoryFreeUCBAlgorithmRandomRewardModel
-from ..ucb import UCBAlgorithm, UCBAlgorithmImageReward, UCBAlgorithmRandomRewardModel
+from ..adversary import FindPerturbationUCB, OSA, OSAImageReward, OSARandomRewardModel, FullTrajectoryUCBAlgorithmImageReward, TrajectoryFreeUCBAlgorithmImageReward, FullTrajectoryUCBAlgorithmRandomRewardModel, TrajectoryFreeUCBAlgorithmRandomRewardModel, OSAAesthetic
+from ..ucb import UCBAlgorithm, UCBAlgorithmImageReward, UCBAlgorithmRandomRewardModel, UCBAlgorithmAesthetic
 from ..utils import print_norms
 from ..vis import plot_high_dim_vectors
 
@@ -176,6 +176,25 @@ def trajectory_free_random_reward_model(k, d, T, logged_data, epsilon_attack, re
     param_flat = torch.cat([p.view(-1) for p in reward_model.parameters()])
     current_reward_model = load_params_to_new_model(reward_model, param_flat + torch.tensor(perturbation, device='cuda'))
     ucb_with_perturb = UCBAlgorithmRandomRewardModel(k, d, logged_data=logged_data, perturbation=perturbation, reward_model=current_reward_model)
+    _, chosen_arms = ucb_with_perturb.run(T)
+    print("\nNumber of pulls per arm:", ucb_with_perturb.N)
+    print(chosen_arms)
+
+
+### Aesthetic model
+
+def osa_ucb_aesthetic(k, d, T, logged_data, epsilon_attack, qp=False, mlp=None, model=None, preprocess=None):
+    find_perturbation = OSAAesthetic(k, d, T, logged_data, epsilon_attack, qp=qp, mlp=mlp, model=model, preprocess=preprocess)
+    chosen_arms, do_attacks, perturbation = find_perturbation.run()
+    print("\nNumber of pulls per arm:", find_perturbation.N)
+    print(chosen_arms)
+    print(do_attacks)
+    print_norms(perturbation)
+    
+    param_flat = torch.cat([p.view(-1) for p in mlp.parameters()])
+    current_reward_model = load_params_to_new_model(mlp, param_flat + torch.tensor(perturbation if perturbation is not None else 0.0, device='cuda'))
+
+    ucb_with_perturb = UCBAlgorithmAesthetic(k, d, logged_data, perturbation, mlp=current_reward_model, model=model, preprocess=preprocess)
     _, chosen_arms = ucb_with_perturb.run(T)
     print("\nNumber of pulls per arm:", ucb_with_perturb.N)
     print(chosen_arms)
