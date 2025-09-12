@@ -132,8 +132,8 @@ def osa_ucb_image_reward(k, d, T, logged_data, epsilon_attack, qp=False, mlp=Non
 
 ### Random Reward Model ###
 
-def osa_random_reward_model(k, d, T, logged_data, epsilon_attack, qp=False, reward_model=None):
-    find_perturbation = OSARandomRewardModel(k, d, T, logged_data, epsilon_attack, qp=qp, reward_model=reward_model)
+def osa_random_reward_model(k, d, T, logged_data, epsilon_attack, qp=False, reward_model=None, best_arm=0):
+    find_perturbation = OSARandomRewardModel(k, d, T, logged_data, epsilon_attack, qp=qp, reward_model=reward_model, best_arm=best_arm)
     chosen_arms, do_attacks, perturbation = find_perturbation.run()
     print("\nNumber of pulls per arm:", find_perturbation.N)
     print(chosen_arms)
@@ -141,12 +141,16 @@ def osa_random_reward_model(k, d, T, logged_data, epsilon_attack, qp=False, rewa
     print_norms(perturbation)
     
     param_flat = torch.cat([p.view(-1) for p in reward_model.parameters()])
+    # print_norms(param_flat.detach().cpu()) # 18.28
     current_reward_model = load_params_to_new_model(reward_model, param_flat + torch.tensor(perturbation if perturbation is not None else 0.0, device='cuda'))
 
     ucb_with_perturb = UCBAlgorithmRandomRewardModel(k, d, logged_data=logged_data, perturbation=perturbation, reward_model=current_reward_model)
     _, chosen_arms = ucb_with_perturb.run(T)
+    ASR = ((T - k + 1 - ucb_with_perturb.N[best_arm]) / (T - k)) * 100
+    print(f"ASR: {ASR}")
     print("\nNumber of pulls per arm:", ucb_with_perturb.N)
     print(chosen_arms)
+    return ASR
 
 
 def full_trajectory_random_reward_model(k, d, T, logged_data, epsilon_attack, reward_model=None):
@@ -201,3 +205,4 @@ def osa_ucb_aesthetic(k, d, T, logged_data, epsilon_attack, qp=False, mlp=None, 
     print(f"ASR: {ASR}")
     print("\nNumber of pulls per arm:", ucb_with_perturb.N)
     print(chosen_arms)
+    return ASR

@@ -6,6 +6,7 @@ from src.config import COFNIG
 from src.ucb import UCBAlgorithmAesthetic
 from src.ablations.ucb_ablations import *
 from models.real_reward_models.aesthetic import get_aesthetic_mlp, get_aesthetic_backbone
+from src.utils import save_json
 
 cfg = COFNIG()
 k, d, T, m, attack_algorithm, hidden_sizes, is_mse = cfg.k, cfg.d, cfg.T, cfg.m, cfg.attack_algorithm, cfg.hidden_sizes, cfg.is_mse
@@ -15,15 +16,16 @@ print(60*'=')
 print(60*'=')
 
 
-prompt_id = 10
 models = ['openjourney', 'sd1_4', 'kandinsky', 'sdxl']
-logged_data = []
 
-for model_name in models:
-    model_data_path = f"data/generative_models/{model_name}/{prompt_id}"
-    image_paths = glob.glob(os.path.join(model_data_path, "*.png"))
-    image_paths.sort()
-    logged_data.append(image_paths)
+def create_logged_data(prompt_id):
+    logged_data = []
+    for model_name in models:
+        model_data_path = f"data/generative_models/{model_name}/{prompt_id}"
+        image_paths = glob.glob(os.path.join(model_data_path, "*.png"))
+        image_paths.sort()
+        logged_data.append(image_paths)
+    return logged_data
 
 
 mlp = get_aesthetic_mlp(clip_model="vit_l_14")
@@ -50,10 +52,23 @@ def run_ucb_without_perturbation_with_reward_model(k, d, T, logged_data, perturb
     return best_arm
 
 
-print("Original UCB Method")
-best_arm = run_ucb_without_perturbation_with_reward_model(k, d, T, logged_data)
-print(60*'=')
-print(60*'=')
+asr_results = dict()
+for prompt_id in range(1, 16, 1):
+    logged_data = create_logged_data(prompt_id)
+    print("Original UCB Method")
+    best_arm = run_ucb_without_perturbation_with_reward_model(k, d, T, logged_data)
+    print(60*'=')
+    print(60*'=')
+
+    print("OSA - Attacking")
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    save_path = cfg.reward_model_save_path
+    ASR = osa_ucb_aesthetic(k, d, T, logged_data=logged_data, epsilon_attack=6.0, qp=False, mlp=mlp, model=model, preprocess=preprocess, best_arm=best_arm) # 10/28.66 ~ 0.34 norm-2 attack
+    print(60*'=')
+    print(60*'=')
+
+    asr_results[prompt_id] = ASR
+    save_json(asr_results, f"results/aesthetic_model_results_T{T}_K{k}.json")
 
 
 # print("Full Trajectory - Attacking")
@@ -65,11 +80,3 @@ print(60*'=')
 # trajectory_free_image_reward(k, d, T, logged_data=logged_data, epsilon_attack=0.5, mlp=mlp, model=model, backbone=backbone, prompt=prompt)
 # print(60*'=')
 # print(60*'=')
-
-
-print("OSA - Attacking")
-device = "cuda" if torch.cuda.is_available() else "cpu"
-save_path = cfg.reward_model_save_path
-osa_ucb_aesthetic(k, d, T, logged_data=logged_data, epsilon_attack=6.0, qp=False, mlp=mlp, model=model, preprocess=preprocess, best_arm=best_arm) # 10/28.66 ~ 0.34 norm-2 attack
-print(60*'=')
-print(60*'=')

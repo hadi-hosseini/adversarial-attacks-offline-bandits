@@ -16,8 +16,6 @@ with open("prompts.json", "r") as f:
 
 seeds = list(range(100))
 
-
-
 for item in prompts:
     prompt_id = item['prompt_id']
     prompt = item['prompt']
