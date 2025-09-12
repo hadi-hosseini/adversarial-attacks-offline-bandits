@@ -524,7 +524,7 @@ class OSAEpsilonGreedy:
 
 
 
-
+# Attack Image Reward Model
 
 class OSAImageReward:
     def __init__(self, k, d, T, logged_data, epsilon, qp=False, target_arm=None, mlp=None, model=None, backbone=None, prompt=None):
@@ -841,10 +841,7 @@ class TrajectoryFreeUCBAlgorithmImageReward:
 
 
 
-
-
-
-
+# Attack Random Reward Model
 class OSARandomRewardModel:
     def __init__(self, k, d, T, logged_data, epsilon, qp=False, target_arm=None, reward_model=None):
         self.k = k
@@ -1173,7 +1170,7 @@ class TrajectoryFreeUCBAlgorithmRandomRewardModel:
 
 
 
-### Aesthetic
+### Attack Aesthetic Reward Model
 class OSAAesthetic:
     def __init__(self, k, d, T, logged_data, epsilon, qp=False, target_arm=None, mlp=None, model=None, preprocess=None):
         self.k = k

@@ -17,7 +17,7 @@ print(60*'=')
 print(60*'=')
 
 
-prompt_id = 3
+prompt_id = 7
 prompts = read_json("models/prompts.json")
 prompt = prompts[prompt_id - 1]['prompt']
 
