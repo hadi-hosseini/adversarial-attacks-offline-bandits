@@ -12,11 +12,11 @@ device = "cuda"
 
 seeds = list(range(100))
 
-for item in prompts[10:]:
+for item in prompts[20:]:
     prompt_id = item['prompt_id']
     prompt = item['prompt']
     for seed in seeds:
-        out_dir = f"models/sd1_4/{prompt_id}"
+        out_dir = f"data/generative_models/sd1_4/{prompt_id}"
         os.makedirs(out_dir, exist_ok=True)
         out_path = f"{out_dir}/{seed}.png"
 

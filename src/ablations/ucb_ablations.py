@@ -183,8 +183,8 @@ def trajectory_free_random_reward_model(k, d, T, logged_data, epsilon_attack, re
 
 ### Aesthetic model
 
-def osa_ucb_aesthetic(k, d, T, logged_data, epsilon_attack, qp=False, mlp=None, model=None, preprocess=None):
-    find_perturbation = OSAAesthetic(k, d, T, logged_data, epsilon_attack, qp=qp, mlp=mlp, model=model, preprocess=preprocess)
+def osa_ucb_aesthetic(k, d, T, logged_data, epsilon_attack, qp=False, mlp=None, model=None, preprocess=None, best_arm=0):
+    find_perturbation = OSAAesthetic(k, d, T, logged_data, epsilon_attack, qp=qp, mlp=mlp, model=model, preprocess=preprocess, best_arm=best_arm)
     chosen_arms, do_attacks, perturbation = find_perturbation.run()
     print("\nNumber of pulls per arm:", find_perturbation.N)
     print(chosen_arms)
@@ -192,9 +192,12 @@ def osa_ucb_aesthetic(k, d, T, logged_data, epsilon_attack, qp=False, mlp=None, 
     print_norms(perturbation)
     
     param_flat = torch.cat([p.view(-1) for p in mlp.parameters()])
+    # print_norms(param_flat.detach().cpu()) # 28.66
     current_reward_model = load_params_to_new_model(mlp, param_flat + torch.tensor(perturbation if perturbation is not None else 0.0, device='cuda'))
 
     ucb_with_perturb = UCBAlgorithmAesthetic(k, d, logged_data, perturbation, mlp=current_reward_model, model=model, preprocess=preprocess)
     _, chosen_arms = ucb_with_perturb.run(T)
+    ASR = ((T - k + 1 - ucb_with_perturb.N[best_arm]) / (T - k)) * 100
+    print(f"ASR: {ASR}")
     print("\nNumber of pulls per arm:", ucb_with_perturb.N)
     print(chosen_arms)

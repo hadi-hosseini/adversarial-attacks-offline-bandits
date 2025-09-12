@@ -78,5 +78,45 @@
     {
         "prompt_id": 20,
         "prompt": "A playful kitten with a bell collar on the left, batting at a fluttering butterfly on the right."
+    },
+    {
+        "prompt_id": 21,
+        "prompt": "Two grey wolves howling and three deer watching."
+    },
+    {
+        "prompt_id": 22,
+        "prompt": "A scene with two blue balls amidst many yellow ones."
+    },
+    {
+        "prompt_id": 23,
+        "prompt": "A bird chirping melodiously on the right, with another listening intently on the left."
+    },
+    {
+        "prompt_id": 24,
+        "prompt": "In a race between a tortoise and a hare, the tortoise takes a nap, but the hare does not."
+    },
+    {
+        "prompt_id": 25,
+        "prompt": "A car drives down the road without wheels, floating above the ground."
+    },
+    {
+        "prompt_id": 26,
+        "prompt": "A car moves forward but a bicycle doesn't."
+    },
+    {
+        "prompt_id": 27,
+        "prompt": "A snowman with a hat, and no scarf around its neck."
+    },
+    {
+        "prompt_id": 28,
+        "prompt": "An elegant wedding venue, a 'Just Married' banner draped across the back of a vintage car."
+    },
+    {
+        "prompt_id": 29,
+        "prompt": "A magical flower is taller than the house next to it."
+    },
+    {
+        "prompt_id": 30,
+        "prompt": "One phoenix soaring above a mountain, its wings shedding three golden feathers."
     }
 ]

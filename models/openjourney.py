@@ -10,7 +10,7 @@ seeds = list(range(100))
 device = "cuda"
 
 
-for item in prompts[10:]:
+for item in prompts[20:]:
     prompt_id = item['prompt_id']
     prompt = item['prompt']
     for seed in seeds:
@@ -20,6 +20,6 @@ for item in prompts[10:]:
         generator = torch.Generator(device=device).manual_seed(seed)
         image = pipe(prompt, generator=generator).images[0]
 
-        save_dir = f"models/openjourney/{prompt_id}"
+        save_dir = f"data/generative_models/openjourney/{prompt_id}"
         os.makedirs(save_dir, exist_ok=True)
         image.save(f"{save_dir}/{seed}.png")

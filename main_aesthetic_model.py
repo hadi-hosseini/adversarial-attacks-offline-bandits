@@ -5,8 +5,6 @@ import glob
 from src.config import COFNIG
 from src.ucb import UCBAlgorithmAesthetic
 from src.ablations.ucb_ablations import *
-import ImageReward as reward
-from src.utils import read_json
 from models.real_reward_models.aesthetic import get_aesthetic_mlp, get_aesthetic_backbone
 
 cfg = COFNIG()
@@ -17,12 +15,7 @@ print(60*'=')
 print(60*'=')
 
 
-prompt_id = 7
-prompts = read_json("models/prompts.json")
-prompt = prompts[prompt_id - 1]['prompt']
-
-
-## 'sd3'
+prompt_id = 10
 models = ['openjourney', 'sd1_4', 'kandinsky', 'sdxl']
 logged_data = []
 
@@ -52,11 +45,13 @@ def run_ucb_without_perturbation_with_reward_model(k, d, T, logged_data, perturb
     ucb = UCBAlgorithmAesthetic(k, d, logged_data=logged_data, perturbation=perturbation, mlp=mlp, model=model, preprocess=preprocess)
     _, chosen_arms = ucb.run(T)
     print("\nNumber of pulls per arm:", ucb.N)
+    best_arm = np.argmax(ucb.N)
     print(chosen_arms)
+    return best_arm
 
 
 print("Original UCB Method")
-run_ucb_without_perturbation_with_reward_model(k, d, T, logged_data)
+best_arm = run_ucb_without_perturbation_with_reward_model(k, d, T, logged_data)
 print(60*'=')
 print(60*'=')
 
@@ -75,6 +70,6 @@ print(60*'=')
 print("OSA - Attacking")
 device = "cuda" if torch.cuda.is_available() else "cpu"
 save_path = cfg.reward_model_save_path
-osa_ucb_aesthetic(k, d, T, logged_data=logged_data, epsilon_attack=0.5, qp=True, mlp=mlp, model=model, preprocess=preprocess)
+osa_ucb_aesthetic(k, d, T, logged_data=logged_data, epsilon_attack=6.0, qp=False, mlp=mlp, model=model, preprocess=preprocess, best_arm=best_arm) # 10/28.66 ~ 0.34 norm-2 attack
 print(60*'=')
 print(60*'=')

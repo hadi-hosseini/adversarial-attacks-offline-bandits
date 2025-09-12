@@ -1172,17 +1172,17 @@ class TrajectoryFreeUCBAlgorithmRandomRewardModel:
 
 ### Attack Aesthetic Reward Model
 class OSAAesthetic:
-    def __init__(self, k, d, T, logged_data, epsilon, qp=False, target_arm=None, mlp=None, model=None, preprocess=None):
+    def __init__(self, k, d, T, logged_data, epsilon, qp=False, mlp=None, model=None, preprocess=None, best_arm=0):
         self.k = k
         self.d = d
         self.T = T
         self.logged_data = logged_data
         self.epsilon = epsilon
         self.qp = qp
-        self.target_arm = target_arm
         self.reward_model = mlp
         self.preprocess = preprocess
         self.model = model
+        self.best_arm = best_arm
         
         self.param_flat = torch.cat([p.view(-1) for p in self.reward_model.parameters()])
         w = sum(p.numel() for p in self.reward_model.parameters() if p.requires_grad)
@@ -1208,29 +1208,30 @@ class OSAAesthetic:
         
         upper_conf = self.empirical_rewards + np.sqrt((2 * np.log(t)) / self.N)
 
-        if self.target_arm:
-          if upper_conf[self.target_arm] > upper_conf[0]:
-            return self.target_arm, False
-          return self.target_arm, True
-        
+        for j in range(0, self.k):
+            if j == self.best_arm:
+              continue
+            if upper_conf[j] > upper_conf[self.best_arm]:
+                target_arm = np.argmax(upper_conf)
+                return target_arm, False
+            
+        sorted_indices = np.argsort(-upper_conf)
+        if sorted_indices[0] == self.best_arm:
+            target_arm = sorted_indices[1] 
         else:
-          for j in range(1, self.k):
-              if upper_conf[j] > upper_conf[0]:
-                  best_arm = np.argmax(upper_conf[1:]) + 1
-                  return best_arm, False
-          best_arm = np.argmax(upper_conf[1:]) + 1
-          return best_arm, True
+            target_arm = sorted_indices[0]
+        return target_arm, True
 
     # do perturbation attack
     def find_perturbation(self, arm, t):
         x = cp.Variable(self.d)
-        d_0 = self.empirical_grad[arm] - self.empirical_grad[0]
-        c_0 = (math.sqrt((2 * math.log(t)) / self.N[0]) - math.sqrt((2 * math.log(t)) / self.N[arm])) + (self.empirical_f[0] - self.empirical_f[arm])
-        self.all_constraints.append((d_0, c_0))
+        d = self.empirical_grad[arm] - self.empirical_grad[self.best_arm]
+        c = (math.sqrt((2 * math.log(t)) / self.N[self.best_arm]) - math.sqrt((2 * math.log(t)) / self.N[arm])) + (self.empirical_f[self.best_arm] - self.empirical_f[arm])
+        self.all_constraints.append((d, c))
 
         constraints = []
-        for (d_0, c_0) in self.all_constraints:
-            constraints.append(x @ d_0 >= c_0 + 1e-6)
+        for (d, c) in self.all_constraints:
+            constraints.append(x @ d >= c + 1e-6)
 
         # face as feasbility problem
         if self.qp:

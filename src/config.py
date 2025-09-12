@@ -3,7 +3,7 @@ from typing import Tuple
 
 @dataclass
 class COFNIG:
-    k: int = 4 # The number of arms # K=3
+    k: int = 3 # The number of arms # K=3
     d: int = 1000  # The dimension of attack and mus  # D=1000
     n_samples: int = 3000  # The number of samples for each arm in the logged data 
     sigma: float = 1.0  # The variance of Gaussian distribution of each arm
