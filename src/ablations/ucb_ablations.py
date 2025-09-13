@@ -113,8 +113,8 @@ def trajectory_free_image_reward(k, d, T, logged_data, epsilon_attack, mlp=None,
     print("\nNumber of pulls per arm:", ucb_with_perturb.N)
     print(chosen_arms)
 
-def osa_ucb_image_reward(k, d, T, logged_data, epsilon_attack, qp=False, mlp=None, model=None, backbone=None, prompt=None):
-    find_perturbation = OSAImageReward(k, d, T, logged_data, epsilon_attack, qp=qp, mlp=mlp, model=model, backbone=backbone, prompt=prompt)
+def osa_ucb_image_reward(k, d, T, logged_data, epsilon_attack, qp=False, mlp=None, model=None, backbone=None, prompt=None, best_arm=0):
+    find_perturbation = OSAImageReward(k, d, T, logged_data, epsilon_attack, qp=qp, mlp=mlp, model=model, backbone=backbone, prompt=prompt, best_arm=best_arm)
     chosen_arms, do_attacks, perturbation = find_perturbation.run()
     print("\nNumber of pulls per arm:", find_perturbation.N)
     print(chosen_arms)
@@ -122,10 +122,13 @@ def osa_ucb_image_reward(k, d, T, logged_data, epsilon_attack, qp=False, mlp=Non
     print_norms(perturbation)
     
     param_flat = torch.cat([p.view(-1) for p in mlp.parameters()])
+    # print_norms(param_flat.detach().cpu()) # 6.62
     current_reward_model = load_params_to_new_model(mlp, param_flat + torch.tensor(perturbation if perturbation is not None else 0.0, device='cuda'))
 
     ucb_with_perturb = UCBAlgorithmImageReward(k, d, logged_data, perturbation, mlp=current_reward_model, model=model, backbone=backbone, prompt=prompt)
     _, chosen_arms = ucb_with_perturb.run(T)
+    ASR = ((T - k + 1 - ucb_with_perturb.N[best_arm]) / (T - k)) * 100
+    print(f"ASR: {ASR}")
     print("\nNumber of pulls per arm:", ucb_with_perturb.N)
     print(chosen_arms)
 
