@@ -43,7 +43,7 @@ def run_ucb_without_perturbation_with_reward_model(k, d, T, logged_data, perturb
     return best_arm
 
 asr_results = dict()
-for prompt_id in range(1, 16, 1):
+for prompt_id in range(4, 31, 1):
     logged_data = create_logged_data(prompt_id)
 
     print("Original UCB Method")

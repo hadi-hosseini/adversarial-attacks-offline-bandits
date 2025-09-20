@@ -66,9 +66,9 @@ if attack_algorithm == "ucb":
         print(chosen_arms)
 
 
-    # run_ucb_without_perturbation(k, d, T, mu, logged_data) # run ucb without perturbation
-    # print(60*'=')
-    # print(60*'=')
+    run_ucb_without_perturbation(k, d, T, mu, logged_data) # run ucb without perturbation
+    print(60*'=')
+    print(60*'=')
 
 
     # run_ucb_without_perturbation_with_reward_model(k, d, T, mu, logged_data) # run ucb without perturbation; with reward model
@@ -81,11 +81,13 @@ if attack_algorithm == "ucb":
     #     print(60*'=')
     #     print(60*'=')
 
-    # print("ABLATION 1")
+
+    # print("Full Trajectory Attack")
     # empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
-    # ablation1_ucb(k, d, T, mu=mu, empirical_mus=empirical_mus, logged_data=logged_data, epsilon_attack=0.5) # check all inequalities
+    # full_trajectory(k, d, T, mu=mu, empirical_mus=mu, logged_data=logged_data, epsilon_attack=0.5, use_defense=True, real_data=False) # check all inequalities
     # print(60*'=')
     # print(60*'=')
+
 
     # print("ABLATION 1 - Attacking the Reward Model")
     # empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
@@ -96,19 +98,24 @@ if attack_algorithm == "ucb":
     # print(60*'=')
     # print(60*'=')
 
+
+    # print("Trajectory-Free Attack")
+    # empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
+    # trajectory_free(k, d, T, mu=mu, empirical_mus=mu, logged_data=logged_data, epsilon_attack=0.5, use_defense=True, real_data=False) # check all inequalities
+    # print(60*'=')
+    # print(60*'=')
+
     # print("ABLATION 5")
     # ablation5_ucb(k, d, T, mu, logged_data, epsilon_attack=0.5, targeted=True, target_arm=2) # Target Attack
     # print(60*'=')
     # print(60*'=')
 
-    # print("OSA")
 
-    for k in range(35, 75, 5):
-        print(f"K: {k}")
-        empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
-        heuristic1_ucb(k, d, T, mu=mu, empirical_mu=mu, logged_data=logged_data, epsilon_attack=0.5, qp=True) # qp=False default
-        print(60*'=')
-        print(60*'=')
+    print("OSA Attack")
+    empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
+    osa(k, d, T, mu=mu, empirical_mu=mu, logged_data=logged_data, epsilon_attack=0.5, qp=False, use_defense=False) # qp=False default
+    print(60*'=')
+    print(60*'=')
 
     # print("OSA - Attacking the Reward Model")
     # empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]

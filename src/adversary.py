@@ -308,7 +308,6 @@ class OSA:
 
         return self.chosen_arms, self.do_attacks, self.perturbation
      
-
 class FindPerturbationETC:
     def __init__(self, k, m, d, target_arm, true_means, logged_data, epsilon, qp=False, reward_model=None):
         self.k = k
