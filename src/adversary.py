@@ -1300,5 +1300,5 @@ class OSAAesthetic:
 
             # update results
             self.update(arm, t, do_attack)
-
+            
         return self.chosen_arms, self.do_attacks, self.perturbation

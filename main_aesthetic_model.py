@@ -16,8 +16,8 @@ print(60*'=')
 print(60*'=')
 
 
-models = ['openjourney', 'sd1_4', 'kandinsky', 'sdxl']
-# models = ['sd3', 'openjourney', 'sdxl']
+# models = ['openjourney', 'sd1_4', 'kandinsky', 'sdxl']
+models = ['sd3', 'openjourney', 'sdxl']
 
 def create_logged_data(prompt_id):
     logged_data = []
@@ -54,8 +54,9 @@ def run_ucb_without_perturbation_with_reward_model(k, d, T, logged_data, perturb
 
 
 asr_results = dict()
-for prompt_id in range(15, 31, 1):
+for prompt_id in range(5, 6, 1):
     logged_data = create_logged_data(prompt_id)
+   
     print("Original UCB Method")
     best_arm = run_ucb_without_perturbation_with_reward_model(k, d, T, logged_data)
     print(60*'=')
@@ -69,7 +70,7 @@ for prompt_id in range(15, 31, 1):
     print(60*'=')
 
     asr_results[prompt_id] = ASR
-    save_json(asr_results, f"results/aesthetic_model_results_T{T}_K{k}.json")
+    # save_json(asr_results, f"results/aesthetic_model_results_T{T}_K{k}.json")
 
 
 # print("Full Trajectory - Attacking")

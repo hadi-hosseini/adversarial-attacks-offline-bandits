@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 from ..reward_architecture import load_params_to_new_model
-from ..adversary import FindPerturbationUCB, OSA, OSAImageReward, OSARandomRewardModel, FullTrajectoryUCBAlgorithmImageReward, TrajectoryFreeUCBAlgorithmImageReward, FullTrajectoryUCBAlgorithmRandomRewardModel, TrajectoryFreeUCBAlgorithmRandomRewardModel, OSAAesthetic, SmallOSA
+from ..adversary import FindPerturbationUCB, OSA, OSAImageReward, OSARandomRewardModel, FullTrajectoryUCBAlgorithmImageReward, TrajectoryFreeUCBAlgorithmImageReward, FullTrajectoryUCBAlgorithmRandomRewardModel, TrajectoryFreeUCBAlgorithmRandomRewardModel, OSAAesthetic
 from ..ucb import UCBAlgorithm, UCBAlgorithmImageReward, UCBAlgorithmRandomRewardModel, UCBAlgorithmAesthetic
 from ..utils import print_norms
 from ..vis import plot_high_dim_vectors
