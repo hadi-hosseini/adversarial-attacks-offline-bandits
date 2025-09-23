@@ -101,7 +101,7 @@ if attack_algorithm == "ucb":
 
     # print("Trajectory-Free Attack")
     # empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
-    # trajectory_free(k, d, T, mu=mu, empirical_mus=mu, logged_data=logged_data, epsilon_attack=0.5, use_defense=True, real_data=False) # check all inequalities
+    # trajectory_free(k, d, T, mu=mu, empirical_mus=empirical_mus, logged_data=logged_data, epsilon_attack=0.5, use_defense=True, real_data=False) # check all inequalities
     # print(60*'=')
     # print(60*'=')
 
@@ -113,7 +113,7 @@ if attack_algorithm == "ucb":
 
     print("OSA Attack")
     empirical_mus = [np.mean(arm_samples, axis=0) for arm_samples in logged_data]
-    osa(k, d, T, mu=mu, empirical_mu=mu, logged_data=logged_data, epsilon_attack=0.5, qp=False, use_defense=False) # qp=False default
+    osa(k, d, T, mu=mu, empirical_mu=empirical_mus, logged_data=logged_data, epsilon_attack=0.5, qp=False, use_defense=False) # qp=False default
     print(60*'=')
     print(60*'=')
 

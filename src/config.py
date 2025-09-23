@@ -4,10 +4,10 @@ from typing import Tuple
 @dataclass
 class COFNIG:
     k: int = 3 # The number of arms # K=3
-    d: int = 10000  # The dimension of attack and mus  # D=1000
+    d: int = 1000  # The dimension of attack and mus  # D=1000
     n_samples: int = 4000  # The number of samples for each arm in the logged data 
     sigma: float = 1.0  # The variance of Gaussian distribution of each arm
-    T: int = 10  # The number of rounds # T=100000
+    T: int = 200  # The number of rounds # T=100000
     m: int = 5 # The number of pulling each arm in ETC algorithm
     creat_new_instance: bool = False # Whether to create a new bandit instance or not
     train_reward_model: bool = False # Train the reward model or not

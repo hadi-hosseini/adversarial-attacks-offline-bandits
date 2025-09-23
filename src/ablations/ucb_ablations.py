@@ -22,7 +22,7 @@ def shuffle_samples(data, T, seed=42):
     #     shuffled[k] = data[k, idx, :]
 
     for k in range(K):
-        idx_first = np.arange(int(T/4))
+        idx_first = np.arange(int(T/4)) # T/4 is good
         np.random.shuffle(idx_first)
         idx_rest = np.arange(int(T/4), n_samples)
         idx = np.concatenate([idx_first, idx_rest])
@@ -149,18 +149,18 @@ def osa(k, d, T, mu, empirical_mu, logged_data, epsilon_attack, qp=False, reward
     print("\nNumber of pulls per arm:", ucb_with_perturb.N)
     print(chosen_arms)
 
-    # if use_defense:
-    #     # np_logged_data = shuffle_samples(np.array(logged_data), find_perturbation.N)
-    #     np_logged_data = shuffle_samples(np.array(logged_data), T)
-    #     logged_data = np_logged_data.tolist()
+    if use_defense:
+        # np_logged_data = shuffle_samples(np.array(logged_data), find_perturbation.N)
+        np_logged_data = shuffle_samples(np.array(logged_data), T)
+        logged_data = np_logged_data.tolist()
     
-    # print("After Defense")
-    # ucb_with_perturb = UCBAlgorithm(k, d, mu, logged_data, perturbation, reward_model=current_reward_model, real_data=real_data)
-    # rewards, chosen_arms = ucb_with_perturb.run(T)
-    # ASR = ((T - k + 1 - ucb_with_perturb.N[0]) / (T - k)) * 100
-    # print(f"ASR: {ASR}")
-    # print("\nNumber of pulls per arm:", ucb_with_perturb.N)
-    # print(chosen_arms)
+    print("After Defense")
+    ucb_with_perturb = UCBAlgorithm(k, d, mu, logged_data, perturbation, reward_model=current_reward_model, real_data=real_data)
+    rewards, chosen_arms = ucb_with_perturb.run(T)
+    ASR = ((T - k + 1 - ucb_with_perturb.N[0]) / (T - k)) * 100
+    print(f"ASR: {ASR}")
+    print("\nNumber of pulls per arm:", ucb_with_perturb.N)
+    print(chosen_arms)
 
     if reward_model is None:
         plot_high_dim_vectors(mu[0], perturbation + mu[0], dim=2, filename="heuristic1", data=mu[1:])
