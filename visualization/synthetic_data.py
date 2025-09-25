@@ -87,6 +87,8 @@ import numpy as np
 # -------------------------------
 # Data from LaTeX table (mm:ss → seconds)
 # -------------------------------
+
+
 osa_data = [
     (3, 10000, 1, 3000, 1),
     (3, 1000, 0, 6000, 3),
@@ -133,6 +135,7 @@ nonlinear_values = [
 # -------------------------------
 fig, axes = plt.subplots(1, 2, figsize=(16, 6), sharey=True)
 
+
 def plot_attack_times(ax, values, categories, model_name):
     x = np.arange(len(categories))
     width = 0.25
@@ -145,7 +148,8 @@ def plot_attack_times(ax, values, categories, model_name):
         ax.bar(x + i*width, log_vals, width, label=method, color=colors[i])
 
     ax.set_xticks(x + width)
-    ax.set_xticklabels(categories, fontsize=10, rotation=25)
+    # ax.set_xticklabels(categories, fontsize=10, rotation=25)
+    ax.set_xticklabels(categories, fontsize=12, rotation=25, fontweight="bold")
     ax.set_ylabel("log(Attack Time + 1)", fontsize=12, fontweight="bold")
     ax.set_title(f"{model_name} Reward Model", fontsize=13, fontweight="bold")
     ax.yaxis.grid(True, linestyle="--", alpha=0.5)
